@@ -15,7 +15,7 @@
         <!-- Flink 2.2 + the externalized Kafka connector for the 2.x line.
              Adjust kafka.connector.version if your mirror pins a different build. -->
         <flink.version>2.2.0</flink.version>
-        <kafka.connector.version>4.0.0-2.0</kafka.connector.version>
+        <kafka.connector.version>5.0.0-2.2</kafka.connector.version>
     </properties>
 
     <dependencies>

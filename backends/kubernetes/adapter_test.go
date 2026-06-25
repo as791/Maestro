@@ -77,7 +77,7 @@ func TestBuildFlinkDeployment(t *testing.T) {
 		Version:      version,
 		SavepointURI: "s3://savepoints/orders/v2",
 		Previous:     &domain.DeploymentVersion{},
-	}, baseFlinkDefaults)
+	}, baseFlinkDefaults, "")
 
 	assertNestedString(t, obj, "v2_2", "spec", "flinkVersion")
 	assertNestedString(t, obj, "registry.example/orders@sha256:abc123", "spec", "image")
@@ -128,7 +128,7 @@ func TestObservedHealth(t *testing.T) {
 
 func TestSetJobState(t *testing.T) {
 	identity := testIdentity()
-	seed := buildFlinkDeployment(activities.ApplyDeploymentInput{Identity: identity, Version: domain.BuildVersion(1, testSpec())}, baseFlinkDefaults)
+	seed := buildFlinkDeployment(activities.ApplyDeploymentInput{Identity: identity, Version: domain.BuildVersion(1, testSpec())}, baseFlinkDefaults, "")
 	backend := newTestBackend(t, []runtime.Object{seed}, nil)
 
 	if err := backend.SetJobState(context.Background(), activities.SetJobStateInput{Identity: identity, State: "SUSPENDED"}); err != nil {

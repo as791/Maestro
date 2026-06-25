@@ -38,6 +38,16 @@ type Config struct {
 	LeaseNamespace string
 	// SlotBudget caps total reserved task slots per node pool.
 	SlotBudget int
+	// WatchNamespaces restricts informer caches (and therefore the RBAC the worker
+	// needs) to these namespaces. Empty means cluster-wide, which requires
+	// cluster-scoped RBAC.
+	WatchNamespaces []string
+	// LocalStoragePath, when set, mounts a hostPath at that location into every
+	// Flink pod and points HA / checkpoint / savepoint directories under it. This
+	// gives a single-node cluster (e.g. kind) shared, restart-surviving storage so
+	// savepoint-based upgrades work without an object store. Leave empty in
+	// production and supply s3:// (etc.) directories via the deployment FlinkConfig.
+	LocalStoragePath string
 	// DefaultFlinkConfig is merged under every FlinkDeployment's flinkConfiguration
 	// (deployment-specified config wins on conflict).
 	DefaultFlinkConfig map[string]string
@@ -73,21 +83,24 @@ func (c *Config) withDefaults() {
 	}
 }
 
+// baseFlinkDefaults are infrastructure-free: they do not assume any persistent
+// volume or object store, so a vanilla deployment runs out of the box.
+// Durable checkpoint/savepoint/HA directories must be supplied either through
+// the deployment's FlinkConfig (e.g. an s3:// path on EKS) or via
+// Config.LocalStoragePath (a hostPath for single-node clusters).
 var baseFlinkDefaults = map[string]string{
-	"state.backend.type":               "rocksdb",
+	"state.backend.type":               "hashmap",
 	"execution.checkpointing.interval": "10s",
-	"high-availability.type":           "kubernetes",
-	"high-availability.storageDir":     "file:///flink-data/ha",
-	"state.checkpoints.dir":            "file:///flink-data/checkpoints",
-	"state.savepoints.dir":             "file:///flink-data/savepoints",
 }
 
 // Backend implements activities.Backend against the Flink Kubernetes Operator.
 type Backend struct {
-	dyn      dynamic.Interface
-	core     kubernetes.Interface
-	factory  dynamicinformer.DynamicSharedInformerFactory
-	lister   cache.GenericLister
+	dyn       dynamic.Interface
+	core      kubernetes.Interface
+	factories []dynamicinformer.DynamicSharedInformerFactory
+	// listers maps a watched namespace to its FlinkDeployment lister. The key ""
+	// holds a cluster-wide lister when no namespaces are configured.
+	listers  map[string]cache.GenericLister
 	leases   *leaseStore
 	cfg      Config
 	defaults map[string]string
@@ -118,16 +131,27 @@ func newWithClients(dyn dynamic.Interface, core kubernetes.Interface, cfg Config
 	for k, v := range cfg.DefaultFlinkConfig {
 		defaults[k] = v
 	}
-	factory := dynamicinformer.NewDynamicSharedInformerFactory(dyn, cfg.ResyncPeriod)
-	informer := factory.ForResource(flinkDeploymentGVR)
+	listers := map[string]cache.GenericLister{}
+	var factories []dynamicinformer.DynamicSharedInformerFactory
+	if len(cfg.WatchNamespaces) == 0 {
+		factory := dynamicinformer.NewDynamicSharedInformerFactory(dyn, cfg.ResyncPeriod)
+		listers[""] = factory.ForResource(flinkDeploymentGVR).Lister()
+		factories = append(factories, factory)
+	} else {
+		for _, ns := range cfg.WatchNamespaces {
+			factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dyn, cfg.ResyncPeriod, ns, nil)
+			listers[ns] = factory.ForResource(flinkDeploymentGVR).Lister()
+			factories = append(factories, factory)
+		}
+	}
 	return &Backend{
-		dyn:      dyn,
-		core:     core,
-		factory:  factory,
-		lister:   informer.Lister(),
-		leases:   newLeaseStore(core, cfg.LeaseNamespace, cfg.SlotBudget),
-		cfg:      cfg,
-		defaults: defaults,
+		dyn:       dyn,
+		core:      core,
+		factories: factories,
+		listers:   listers,
+		leases:    newLeaseStore(core, cfg.LeaseNamespace, cfg.SlotBudget),
+		cfg:       cfg,
+		defaults:  defaults,
 	}
 }
 
@@ -135,10 +159,12 @@ func newWithClients(dyn dynamic.Interface, core kubernetes.Interface, cfg Config
 // synced. Call it once before serving activities. The informer-backed reads keep
 // ObserveDeployment off the API server hot path, which matters at 10k jobs.
 func (b *Backend) Start(ctx context.Context) error {
-	b.factory.Start(ctx.Done())
-	for gvr, synced := range b.factory.WaitForCacheSync(ctx.Done()) {
-		if !synced {
-			return fmt.Errorf("informer cache for %s did not sync", gvr)
+	for _, factory := range b.factories {
+		factory.Start(ctx.Done())
+		for gvr, synced := range factory.WaitForCacheSync(ctx.Done()) {
+			if !synced {
+				return fmt.Errorf("informer cache for %s did not sync", gvr)
+			}
 		}
 	}
 	return nil
@@ -158,7 +184,7 @@ func (b *Backend) ReleaseCapacityLease(ctx context.Context, leaseID string) erro
 }
 
 func (b *Backend) ApplyDeployment(ctx context.Context, input activities.ApplyDeploymentInput) (activities.ApplyDeploymentResult, error) {
-	desired := buildFlinkDeployment(input, b.defaults)
+	desired := buildFlinkDeployment(input, b.defaults, b.cfg.LocalStoragePath)
 	applied, err := b.dyn.Resource(flinkDeploymentGVR).
 		Namespace(input.Identity.Namespace).
 		Apply(ctx, input.Identity.Name, desired, metav1.ApplyOptions{FieldManager: fieldManager, Force: true})
@@ -329,13 +355,18 @@ func (b *Backend) RecordAudit(ctx context.Context, event activities.AuditEvent) 
 // getFlinkDeployment reads from the informer cache, falling back to a live read
 // when the object is not yet cached.
 func (b *Backend) getFlinkDeployment(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error) {
-	obj, err := b.lister.ByNamespace(namespace).Get(name)
-	if err == nil {
-		if u, ok := obj.(*unstructured.Unstructured); ok {
-			return u, nil
-		}
-		if u, convErr := toUnstructured(obj); convErr == nil {
-			return u, nil
+	lister := b.listers[namespace]
+	if lister == nil {
+		lister = b.listers[""]
+	}
+	if lister != nil {
+		if obj, err := lister.ByNamespace(namespace).Get(name); err == nil {
+			if u, ok := obj.(*unstructured.Unstructured); ok {
+				return u, nil
+			}
+			if u, convErr := toUnstructured(obj); convErr == nil {
+				return u, nil
+			}
 		}
 	}
 	return b.dyn.Resource(flinkDeploymentGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})

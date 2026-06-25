@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/flink-control-plane/fcp"
 	k8sbackend "github.com/flink-control-plane/fcp/backends/kubernetes"
@@ -39,8 +40,10 @@ func main() {
 	restCfg.Burst = intEnv("KUBE_CLIENT_BURST", 100)
 
 	backend, err := k8sbackend.New(restCfg, k8sbackend.Config{
-		LeaseNamespace: env("FLINK_LEASE_NAMESPACE", "fcp-system"),
-		SlotBudget:     intEnv("FLINK_SLOT_BUDGET", 4096),
+		LeaseNamespace:   env("FLINK_LEASE_NAMESPACE", "fcp-system"),
+		SlotBudget:       intEnv("FLINK_SLOT_BUDGET", 4096),
+		WatchNamespaces:  splitNonEmpty(os.Getenv("FLINK_WATCH_NAMESPACES")),
+		LocalStoragePath: os.Getenv("FLINK_LOCAL_STORAGE_PATH"),
 	})
 	if err != nil {
 		log.Fatalf("build kubernetes backend: %v", err)
@@ -144,4 +147,15 @@ func boolEnv(key string, fallback bool) bool {
 		return v
 	}
 	return fallback
+}
+
+// splitNonEmpty parses a comma-separated env value into a trimmed, non-empty slice.
+func splitNonEmpty(value string) []string {
+	var out []string
+	for _, part := range strings.Split(value, ",") {
+		if p := strings.TrimSpace(part); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

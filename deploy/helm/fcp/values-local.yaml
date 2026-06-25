@@ -30,3 +30,5 @@ flink:
   watchNamespaces:
     - streaming
   leaseNamespace: fcp-system
+  # Single-node kind: hostPath shared across JM/TM so savepoint upgrades work.
+  localStoragePath: /flink-data

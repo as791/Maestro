@@ -1,6 +1,7 @@
 # Single-node KRaft Kafka for local testing, managed by the Strimzi operator
-# (>= 0.46, which defaults to KRaft + KafkaNodePool). Ephemeral storage only.
-apiVersion: kafka.strimzi.io/v1beta2
+# (1.0.x, kafka.strimzi.io/v1 API, KRaft + KafkaNodePool). Ephemeral storage only.
+# Kafka version must be one the operator supports (Strimzi 1.0.1: 4.1.x / 4.2.0).
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
   name: dual-role
@@ -15,7 +16,7 @@ spec:
   storage:
     type: ephemeral
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: fcp
@@ -25,7 +26,7 @@ metadata:
     strimzi.io/kraft: enabled
 spec:
   kafka:
-    version: 3.9.0
+    version: 4.1.0
     listeners:
       - name: plain
         port: 9092
@@ -40,7 +41,7 @@ spec:
   entityOperator:
     topicOperator: {}
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: wikimedia.recentchange
@@ -51,7 +52,7 @@ spec:
   partitions: 6
   replicas: 1
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: wikimedia.edit-counts

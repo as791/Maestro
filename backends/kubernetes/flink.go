@@ -63,8 +63,10 @@ func upgradeMode(input activities.ApplyDeploymentInput) string {
 }
 
 // buildFlinkDeployment renders a FlinkDeployment custom resource from a control
-// plane apply request. The result is suitable for a server-side apply.
-func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[string]string) *unstructured.Unstructured {
+// plane apply request. The result is suitable for a server-side apply. When
+// localStoragePath is set, a hostPath volume is mounted into every Flink pod and
+// HA / checkpoint / savepoint directories are pointed under it.
+func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[string]string, localStoragePath string) *unstructured.Unstructured {
 	spec := input.Version.Spec
 
 	flinkConfig := map[string]string{}
@@ -73,6 +75,12 @@ func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[st
 	}
 	flinkConfig["pipeline.max-parallelism"] = strconv.Itoa(spec.MaxParallelism)
 	flinkConfig["taskmanager.numberOfTaskSlots"] = strconv.Itoa(maxInt(spec.Resources.SlotsPerManager, 1))
+	if localStoragePath != "" {
+		setIfAbsent(flinkConfig, "high-availability.type", "kubernetes")
+		setIfAbsent(flinkConfig, "high-availability.storageDir", "file:///flink-data/ha")
+		setIfAbsent(flinkConfig, "state.checkpoints.dir", "file:///flink-data/checkpoints")
+		setIfAbsent(flinkConfig, "state.savepoints.dir", "file:///flink-data/savepoints")
+	}
 	for k, v := range spec.FlinkConfig {
 		flinkConfig[k] = v
 	}
@@ -129,7 +137,47 @@ func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[st
 			"job": job,
 		},
 	}
+
+	if localStoragePath != "" {
+		mount := map[string]interface{}{"name": "flink-data", "mountPath": "/flink-data"}
+		deployment["spec"].(map[string]interface{})["podTemplate"] = map[string]interface{}{
+			"spec": map[string]interface{}{
+				// kubelet creates the hostPath root-owned; make it writable for the
+				// non-root Flink user. The job image is reused so there is no extra pull.
+				"initContainers": []interface{}{
+					map[string]interface{}{
+						"name":         "fix-storage-perms",
+						"image":        spec.ImageDigest,
+						"command":      []interface{}{"sh", "-c", "mkdir -p /flink-data && chmod -R 777 /flink-data"},
+						"volumeMounts": []interface{}{mount},
+						"securityContext": map[string]interface{}{
+							"runAsUser": int64(0),
+						},
+					},
+				},
+				"containers": []interface{}{
+					map[string]interface{}{
+						"name":         "flink-main-container",
+						"volumeMounts": []interface{}{mount},
+					},
+				},
+				"volumes": []interface{}{
+					map[string]interface{}{
+						"name":     "flink-data",
+						"hostPath": map[string]interface{}{"path": localStoragePath, "type": "DirectoryOrCreate"},
+					},
+				},
+			},
+		}
+	}
 	return &unstructured.Unstructured{Object: deployment}
+}
+
+// setIfAbsent sets key=value only when the key is not already present.
+func setIfAbsent(m map[string]string, key, value string) {
+	if _, ok := m[key]; !ok {
+		m[key] = value
+	}
 }
 
 // programArgs renders non-reserved JobArgs as deterministic --key value pairs.

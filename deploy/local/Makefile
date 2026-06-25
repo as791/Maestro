@@ -14,7 +14,7 @@ REGISTRY := localhost:5001
 CLUSTER := fcp
 FLINK_OPERATOR_VERSION ?= 1.15.0
 CERT_MANAGER_VERSION ?= v1.16.2
-STRIMZI_VERSION ?= 0.46.0
+STRIMZI_VERSION ?= 1.0.1
 
 .PHONY: up down registry cluster cert-manager operator kafka images fcp producer wait-kafka demo
 
@@ -55,9 +55,12 @@ kafka: wait-kafka
 
 wait-kafka:
 	@echo ">> installing Strimzi $(STRIMZI_VERSION) + Kafka"
-	@kubectl create -f "https://strimzi.io/install/latest?namespace=kafka" -n kafka 2>/dev/null || \
-		kubectl apply -f "https://strimzi.io/install/latest?namespace=kafka" -n kafka
+	@curl -sL "https://github.com/strimzi/strimzi-kafka-operator/releases/download/$(STRIMZI_VERSION)/strimzi-cluster-operator-$(STRIMZI_VERSION).yaml" \
+		| sed 's/namespace: myproject/namespace: kafka/' \
+		| kubectl apply -n kafka -f -
 	@kubectl -n kafka rollout status deploy/strimzi-cluster-operator --timeout=180s
+	@kubectl wait --for condition=established --timeout=120s \
+		crd/kafkas.kafka.strimzi.io crd/kafkanodepools.kafka.strimzi.io crd/kafkatopics.kafka.strimzi.io
 	@kubectl apply -f manifests/kafka.yaml
 	@echo ">> waiting for Kafka to become ready (this can take a few minutes)"
 	@kubectl -n kafka wait kafka/fcp --for=condition=Ready --timeout=600s

@@ -37,6 +37,12 @@ spec:
             {{- include "fcp.commonEnv" . | nindent 12 }}
             - name: FLINK_LEASE_NAMESPACE
               value: {{ include "fcp.leaseNamespace" . | quote }}
+            - name: FLINK_WATCH_NAMESPACES
+              value: {{ join "," .Values.flink.watchNamespaces | quote }}
+            {{- if .Values.flink.localStoragePath }}
+            - name: FLINK_LOCAL_STORAGE_PATH
+              value: {{ .Values.flink.localStoragePath | quote }}
+            {{- end }}
             - name: FLINK_SLOT_BUDGET
               value: {{ .Values.flink.slotBudget | quote }}
             - name: WORKER_MAX_CONCURRENT_ACTIVITIES

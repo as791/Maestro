@@ -80,6 +80,10 @@ flink:
     - streaming
   leaseNamespace: ""               # defaults to the release namespace
   slotBudget: 4096
+  # hostPath mounted into Flink pods for HA/checkpoint/savepoint dirs on a
+  # single-node cluster (e.g. kind). Leave empty in production and set durable
+  # s3:// directories via the deployment FlinkConfig instead.
+  localStoragePath: ""
 
 serviceAccount:
   create: true

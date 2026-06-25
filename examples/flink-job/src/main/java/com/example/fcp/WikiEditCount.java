@@ -3,11 +3,12 @@ package com.example.fcp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -38,10 +39,10 @@ public final class WikiEditCount {
     private WikiEditCount() {}
 
     public static void main(String[] args) throws Exception {
-        final ParameterTool params = ParameterTool.fromArgs(args);
-        final String brokers = params.get("bootstrap.servers", "fcp-kafka-bootstrap.kafka.svc:9092");
-        final String sourceTopic = params.get("source.topic", "wikimedia.recentchange");
-        final String groupId = params.get("group.id", "fcp-wiki-edit-count");
+        final Map<String, String> params = parseArgs(args);
+        final String brokers = params.getOrDefault("bootstrap.servers", "fcp-kafka-bootstrap.kafka.svc:9092");
+        final String sourceTopic = params.getOrDefault("source.topic", "wikimedia.recentchange");
+        final String groupId = params.getOrDefault("group.id", "fcp-wiki-edit-count");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // Checkpointing makes savepoint / last-state upgrade modes meaningful.
@@ -72,6 +73,19 @@ public final class WikiEditCount {
         counts.print();
 
         env.execute("fcp-wiki-edit-count");
+    }
+
+    /** Parses {@code --key value} program arguments into a map. */
+    private static Map<String, String> parseArgs(String[] args) {
+        Map<String, String> params = new HashMap<>();
+        for (int i = 0; i + 1 < args.length; i += 2) {
+            String key = args[i];
+            if (key.startsWith("--")) {
+                key = key.substring(2);
+            }
+            params.put(key, args[i + 1]);
+        }
+        return params;
     }
 
     /** Extracts the {@code wiki} field from a recentchange JSON event. */
