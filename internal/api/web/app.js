@@ -68,9 +68,10 @@ function matchesTargetFilter(target, filterValue) {
 
 async function loadDeploymentInventory(optimisticTargets = []) {
   const localTargets = loadTargets();
-  const localByKey = new Map(localTargets.map((t) => [targetKey(t), t]));
+  const localByKey = new Map(localTargets.map((target) => [targetKey(target), target]));
   const deployments = [];
   let pageToken = "";
+
   try {
     do {
       const query = new URLSearchParams({ limit: "500" });
