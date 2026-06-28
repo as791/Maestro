@@ -8,7 +8,7 @@ const config = {
 
   future: { v4: true },
 
-  url: 'https://maestro.dev',
+  url: 'https://maestro.sh',
   baseUrl: '/',
 
   organizationName: 'maestro-flink',
