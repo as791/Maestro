@@ -37,6 +37,10 @@ func (f *fakeControl) Describe(context.Context, domain.DeploymentIdentity) (doma
 	return domain.DeploymentActorView{Status: domain.ActorIdle}, nil
 }
 
+func (f *fakeControl) DescribeAll(context.Context) ([]domain.DeploymentCardSummary, error) {
+	return nil, nil
+}
+
 func (f *fakeControl) Versions(context.Context, domain.DeploymentIdentity) ([]domain.DeploymentVersion, error) {
 	return nil, nil
 }
