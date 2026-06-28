@@ -17,4 +17,4 @@ dev = ["pytest", "responses"]
 
 [project.urls]
 Homepage = "https://github.com/maestro-flink/maestro"
-Documentation = "https://maestro.sh/docs"
+Documentation = "https://maestrox.dev/docs"

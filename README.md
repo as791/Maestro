@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go&logoColor=white" alt="Go 1.24+">
     <img src="https://img.shields.io/badge/Flink-2.x-E6526F?logo=apache-flink&logoColor=white" alt="Flink 2.x">
     <img src="https://img.shields.io/badge/Kubernetes-EKS%20%7C%20GKE%20%7C%20AKS-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
-    <a href="https://maestro.sh/docs"><img src="https://img.shields.io/badge/Docs-maestro.sh-green" alt="Documentation"></a>
+    <a href="https://maestrox.dev/docs"><img src="https://img.shields.io/badge/Docs-maestrox.dev-green" alt="Documentation"></a>
   </p>
 
   <p>
@@ -208,7 +208,7 @@ scaler.run_loop(interval=60)
 
 Deploy as **AWS Lambda + EventBridge**, **Kubernetes CronJob**, or a **long-running Pod**. Use any metric source: CloudWatch MSK `SumOffsetLag`, Confluent Metrics API, Prometheus, Datadog, or custom business metrics.
 
-See the full [Autoscaling Guide](https://maestro.sh/docs/autoscaling/overview).
+See the full [Autoscaling Guide](https://maestrox.dev/docs/autoscaling/overview).
 
 ## 🆚 Comparison
 
@@ -261,15 +261,15 @@ See the full [Autoscaling Guide](https://maestro.sh/docs/autoscaling/overview).
 
 | Resource | Link |
 |---|---|
-| **Getting Started** | [maestro.sh/docs/getting-started](https://maestro.sh/docs/getting-started) |
-| **Architecture** | [maestro.sh/docs/architecture](https://maestro.sh/docs/architecture) |
-| **API Reference (Swagger)** | [maestro.sh/docs/api-reference](https://maestro.sh/docs/api-reference) |
-| **Autoscaling Guide** | [maestro.sh/docs/autoscaling/overview](https://maestro.sh/docs/autoscaling/overview) |
-| **EKS Deployment** | [maestro.sh/docs/eks-deployment](https://maestro.sh/docs/eks-deployment) |
+| **Getting Started** | [maestrox.dev/docs/getting-started](https://maestrox.dev/docs/getting-started) |
+| **Architecture** | [maestrox.dev/docs/architecture](https://maestrox.dev/docs/architecture) |
+| **API Reference (Swagger)** | [maestrox.dev/docs/api-reference](https://maestrox.dev/docs/api-reference) |
+| **Autoscaling Guide** | [maestrox.dev/docs/autoscaling/overview](https://maestrox.dev/docs/autoscaling/overview) |
+| **EKS Deployment** | [maestrox.dev/docs/eks-deployment](https://maestrox.dev/docs/eks-deployment) |
 | **Scaling to 10,000 Jobs** | [docs/SCALING.md](docs/SCALING.md) |
-| **Python SDK** | [maestro.sh/docs/sdk/python](https://maestro.sh/docs/sdk/python) |
-| **Go SDK** | [maestro.sh/docs/sdk/go](https://maestro.sh/docs/sdk/go) |
-| **Java SDK** | [maestro.sh/docs/sdk/java](https://maestro.sh/docs/sdk/java) |
+| **Python SDK** | [maestrox.dev/docs/sdk/python](https://maestrox.dev/docs/sdk/python) |
+| **Go SDK** | [maestrox.dev/docs/sdk/go](https://maestrox.dev/docs/sdk/go) |
+| **Java SDK** | [maestrox.dev/docs/sdk/java](https://maestrox.dev/docs/sdk/java) |
 
 ## 🤝 Use as a Library
 
@@ -322,9 +322,9 @@ Contributions are welcome under the Apache License 2.0. See [CONTRIBUTING.md](CO
 
 <div align="center">
   <p>
-    <a href="https://maestro.sh/docs">📖 Documentation</a> ·
-    <a href="https://maestro.sh/docs/api-reference">🔌 API Reference</a> ·
-    <a href="https://maestro.sh/docs/autoscaling/overview">📈 Autoscaling Guide</a> ·
+    <a href="https://maestrox.dev/docs">📖 Documentation</a> ·
+    <a href="https://maestrox.dev/docs/api-reference">🔌 API Reference</a> ·
+    <a href="https://maestrox.dev/docs/autoscaling/overview">📈 Autoscaling Guide</a> ·
     <a href="https://github.com/maestro-flink/maestro/issues">🐛 Report Bug</a>
   </p>
 </div>

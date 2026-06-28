@@ -1,4 +1,4 @@
-import {themes as prismThemes} from 'prism-react-renderer';
+import { themes as prismThemes } from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -8,7 +8,7 @@ const config = {
 
   future: { v4: true },
 
-  url: 'https://maestro.sh',
+  url: 'https://maestrox.dev',
   baseUrl: '/',
 
   organizationName: 'maestro-flink',

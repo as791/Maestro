@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/maestro-flink/maestro"
 	"github.com/maestro-flink/maestro/domain"
 	"github.com/maestro-flink/maestro/workflows"
 	"go.temporal.io/api/serviceerror"
@@ -39,7 +38,7 @@ func NewService(temporalClient client.Client, actorTaskQueue, activityTaskQueue 
 
 // actorQueueFor returns the sharded actor task queue that owns a workflow ID.
 func (s *Service) actorQueueFor(workflowID string) string {
-	return maestro.ShardTaskQueue(s.actorTaskQueue, s.actorShards, workflowID)
+	return maestrox.devardTaskQueue(s.actorTaskQueue, s.actorShards, workflowID)
 }
 
 func (s *Service) EnsureDeploymentActor(ctx context.Context, identity domain.DeploymentIdentity, policy *domain.Policy) error {
