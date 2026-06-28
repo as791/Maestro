@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/logo.png" width="120" height="120" alt="Maestro Logo">
+  <img src="internal/api/web/logo.png" width="120" height="120" alt="Maestro Logo">
   <h1>Maestro</h1>
   <p><strong>Open-source control plane for Apache Flink on Kubernetes</strong></p>
 
