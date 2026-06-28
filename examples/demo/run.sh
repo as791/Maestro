@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# End-to-end demo: drive every FCP workflow transition against a live kind
+# End-to-end demo: drive every Maestro workflow transition against a live kind
 # cluster running the Flink Operator 1.15 + Flink 2.2, asserting real
 # FlinkDeployment state after each step.
 #
 # Prereqs: the cluster is up (deploy/local 'make up'), plus kubectl, curl, jq.
 set -euo pipefail
 
-API="${FCP_API:-http://localhost:8080}"
+API="${MAESTRO_API:-http://localhost:8080}"
 REGISTRY="${REGISTRY:-localhost:5001}"
-ENV="${FCP_ENV:-integration}"
-NS="${FCP_NS:-streaming}"
-NAME="${FCP_NAME:-orders}"
+ENV="${MAESTRO_ENV:-integration}"
+NS="${MAESTRO_NS:-streaming}"
+NAME="${MAESTRO_NAME:-orders}"
 BASE="${API}/api/v1/deployments/${ENV}/${NS}/${NAME}"
 CLUSTER_BASE="${API}/api/v1/clusters/${ENV}/${NS}"
 
@@ -36,6 +36,17 @@ show_flinkdeployment() {
     -o jsonpath='{.status.jobManagerDeploymentStatus} / {.status.jobStatus.state}{"\n"}' 2>/dev/null || true
 }
 
+wait_for_flink_job() { # <expected-state> <description>
+  local expected="$1" desc="$2" tries=90 state=""
+  for _ in $(seq 1 $tries); do
+    state="$(kubectl -n "$NS" get flinkdeployment "$NAME" \
+      -o jsonpath='{.status.jobStatus.state}' 2>/dev/null || true)"
+    if [ "$state" = "$expected" ]; then ok "$desc"; return 0; fi
+    sleep 5
+  done
+  fail "timed out waiting for Flink job: $desc (got '${state:-missing}')"
+}
+
 # Resolve the digest of the freshly-pushed good job image.
 say "Resolving job image digest"
 GOOD_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/wiki-edit-count:latest 2>/dev/null || true)"
@@ -49,8 +60,8 @@ good_spec() { # <parallelism>
   "imageDigest": "${GOOD_DIGEST}",
   "flinkVersion": "2.2",
   "jobArgs": {
-    "fcp.entryClass": "com.example.fcp.WikiEditCount",
-    "bootstrap.servers": "fcp-kafka-bootstrap.kafka.svc:9092",
+    "maestro.entryClass": "com.example.maestro.WikiEditCount",
+    "bootstrap.servers": "maestro-kafka-bootstrap.kafka.svc:9092",
     "source.topic": "wikimedia.recentchange"
   },
   "flinkConfig": { "taskmanager.numberOfTaskSlots": "2" },
@@ -74,21 +85,25 @@ curl -fsS -X POST "${BASE}/deploy" -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(idem deploy)" \
   -d "{\"requester\":\"demo\",\"approved\":true,\"spec\":$(good_spec 2)}" >/dev/null
 wait_for '.currentVersion.versionId' '1' "version 1 is current and healthy"
+wait_for_flink_job 'RUNNING' "Flink job is actually running"
 show_flinkdeployment
 
 # 3. Savepoint.
 say "3/11 Trigger savepoint"
 curl -fsS -X POST "${BASE}/savepoint" -H "Idempotency-Key: $(idem sp)" >/dev/null
+savepoint_recorded=false
 for _ in $(seq 1 60); do
-  [ "$(actor_field '.lastSavepoint != null')" = "true" ] && { ok "savepoint recorded: $(actor_field '.lastSavepoint.uri')"; break; }
+  [ "$(actor_field '.lastSavepoint != null')" = "true" ] && { ok "savepoint recorded: $(actor_field '.lastSavepoint.uri')"; savepoint_recorded=true; break; }
   sleep 5
 done
+[ "$savepoint_recorded" = "true" ] || fail "timed out waiting for savepoint"
 
 # 4. Scale (parallelism change -> new version via rollout).
 say "4/11 Scale parallelism to 4"
 curl -fsS -X POST "${BASE}/scale" -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(idem scale)" -d '{"requester":"demo","parallelism":4,"approved":true}' >/dev/null
 wait_for '.currentVersion.spec.parallelism' '4' "scaled to parallelism 4"
+wait_for_flink_job 'RUNNING' "scaled Flink job is running"
 
 # 5. Suspend.
 say "5/11 Suspend"
@@ -99,6 +114,7 @@ wait_for '.status' 'SUSPENDED' "actor suspended"
 say "6/11 Resume"
 curl -fsS -X POST "${BASE}/resume" -H "Idempotency-Key: $(idem resume)" >/dev/null
 wait_for '.status' 'IDLE' "actor resumed"
+wait_for_flink_job 'RUNNING' "resumed Flink job is running"
 
 # 7. Autoscaler enable + freeze.
 say "7/11 Autoscaler enable + freeze"

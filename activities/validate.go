@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/domain"
 )
 
 // ValidateSpec performs the deterministic, backend-independent admission checks

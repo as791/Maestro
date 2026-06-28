@@ -1,197 +1,251 @@
-# FCP (Flink Control Plane)
+<div align="center">
+  <img src="docs/assets/logo.png" width="120" height="120" alt="Maestro Logo">
+  <h1>Maestro</h1>
+  <p><strong>Open-source control plane for Apache Flink on Kubernetes</strong></p>
 
-FCP is an Apache-2.0-licensed Go library and reference control plane for operating stateful Apache Flink deployments with Temporal. It is designed for community adoption, commercial distributions, and enterprise-specific integrations without forking the deterministic workflow core.
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
+    <img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go&logoColor=white" alt="Go 1.24+">
+    <img src="https://img.shields.io/badge/Flink-2.x-E6526F?logo=apache-flink&logoColor=white" alt="Flink 2.x">
+    <img src="https://img.shields.io/badge/Kubernetes-EKS%20%7C%20GKE%20%7C%20AKS-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
+    <a href="https://maestro.dev/docs"><img src="https://img.shields.io/badge/Docs-maestro.dev-green" alt="Documentation"></a>
+  </p>
 
-Temporal owns durable control-plane workflows; the Flink Kubernetes Operator remains the runtime reconciler; Flink remains responsible for data-plane execution and state.
+  <p>
+    Replace AWS Managed Service for Apache Flink · Replace Flink Operator autoscaler<br/>
+    <b>One Helm install on your EKS cluster. No paid services.</b>
+  </p>
+</div>
 
-> Apache Flink and Flink are trademarks of The Apache Software Foundation. FCP is independent and is not affiliated with or endorsed by The Apache Software Foundation.
+---
 
-## Project status
+Maestro is an **Apache 2.0-licensed** Go library and reference control plane for operating stateful Apache Flink deployments with [Temporal](https://temporal.io). It uses the **actor model** — the same pattern [Netflix uses to orchestrate 12,000+ Flink clusters](https://temporal.io/resources/on-demand/actor-workflows-reliably-orchestrating-thousands-of-flink-clusters-at).
 
-FCP is pre-v1. Public Go APIs and Temporal contracts may change between minor releases until `v1.0.0`; changes will be documented. Do not deploy the reference HTTP server directly to production without authentication, authorization, TLS, and deployment-specific policy controls.
+Deploy it with a single `helm install` on your EKS cluster. Build custom autoscalers with the SDK. No vendor lock-in, no per-KPU pricing, no paid services.
 
-The repository is runnable locally without Kubernetes. External systems are represented by deterministic workflow contracts and a simulated activity adapter. A real Kubernetes adapter that drives the Flink Kubernetes Operator ships in [`backends/kubernetes`](backends/kubernetes/) — the same workflow APIs operate either backend.
+> Apache Flink and Flink are trademarks of The Apache Software Foundation. Maestro is independent and is not affiliated with or endorsed by The Apache Software Foundation.
 
-- **Run against real Flink locally:** [`deploy/local`](deploy/local/) brings up kind + Flink Operator 1.15 + Flink 2.2 + Kafka (fed by the public Wikimedia EventStreams) and drives every workflow transition end-to-end ([`examples/demo/run.sh`](examples/demo/run.sh)).
-- **Onboard a third party on EKS:** [`deploy/helm/fcp`](deploy/helm/fcp/) installs FCP against their own operator and Flink jobs, with their own Temporal (or a bundled one for trials).
-- **Operate ~10,000 jobs:** see [`docs/SCALING.md`](docs/SCALING.md) and the [`cmd/loadgen`](cmd/loadgen/) harness.
+## ⚡ Why Maestro?
 
-## Use as a library
+| Problem | Managed Services / Operator | Maestro |
+|---|---|---|
+| **💰 Cost** | AWS MSF: ~$0.11/KPU-hour (~$630/mo per job) | Your Kubernetes nodes only |
+| **🔒 Vendor Lock-in** | Locked to one cloud provider | Any Kubernetes: EKS, GKE, AKS, on-prem |
+| **📦 Flink Version Lag** | Months behind open source | Day-one support for any Flink version |
+| **📊 Autoscaling** | Operator: rescaling storms, opaque logic | Your code, your metrics, your thresholds |
+| **🔍 Observability** | CloudWatch logs / black box | Full durable operation history via Temporal |
+| **🔄 Rollback** | Manual redeploy | One-command automatic rollback with savepoints |
+| **❄️ Incident Response** | No cluster freeze | Namespace-level mutation freeze |
 
-```bash
-go get github.com/flink-control-plane/fcp
-```
+## 🎯 Key Features
 
-Implement the public backend contract:
+- **🚀 Controlled Rollouts** — Savepoint-gated deployments with automatic health checks (checkpoint, restart, backpressure, Kafka lag, sink) and automatic rollback on failure
+- **📈 Custom Autoscaler SDK** — Replace the Flink Operator autoscaler with your own logic using Python, Go, or Java SDKs. React to Kafka lag (CloudWatch MSK / Confluent), TaskManager CPU, or any metric
+- **🛡️ Safety Guardrails** — Idempotency keys, prod approval gates, state-compatibility checks, capacity leases, and conservative change classification
+- **📜 Durable History** — Every deploy, scale, rollback, and savepoint tracked as a Temporal workflow with full audit trail
+- **❄️ Cluster Freeze** — Namespace-level mutation freeze during incidents (savepoints still allowed)
+- **🔌 GitOps Ready** — API-driven, idempotent operations with `Idempotency-Key` headers. Plug into any CI/CD pipeline
 
-```go
-type Backend struct {
-    // Kubernetes, Git, Flink, Prometheus, S3, and audit clients.
-}
+## 🏗️ Architecture
 
-var _ activities.Backend = (*Backend)(nil)
-```
-
-Register it with Temporal workers:
-
-```go
-activityWorker := worker.New(temporalClient, "fcp-activities", worker.Options{})
-fcp.RegisterActivities(activityWorker, backend)
-
-workflowWorker := worker.New(temporalClient, "fcp-workflows", worker.Options{})
-fcp.RegisterWorkflows(workflowWorker)
-```
-
-The module path assumes the project will be hosted at `github.com/flink-control-plane/fcp`. Change it before the first tagged release if a different organization owns the canonical repository.
-
-## Implemented
-
-- Stable `ClusterActor` and `DeploymentActor` workflow IDs.
-- Serialized deployment commands delivered as Temporal signals.
-- Deployment status, version history, operation history, and savepoint queries.
-- Idempotency-key deduplication.
-- Continue-as-new with compacted actor state.
-- Rollout and savepoint child workflows.
-- Conservative change classification and state-compatibility policy.
-- Prod approvals, cluster freeze enforcement, capacity leases, health gates, and rollback.
-- Suspend, resume, savepoint, deploy, rollback, scale, autoscaler enable/freeze, and manual continue-as-new APIs.
-- Separate Temporal task queues for actor workflows and external activities.
-- Simulated GitOps/Kubernetes/Flink/S3/metrics behavior for local end-to-end execution.
-- Temporal workflow tests and HTTP API contract tests.
-
-The current capacity lease is implemented as an idempotent activity-backed reservation store. A durable `DeploymentResourceActor` can replace it when reservations need to survive worker process loss independently of rollout history. The autoscaler implementation is governance-only; the Flink Operator remains the scaling decision maker.
-
-## Architecture
+Maestro implements the [**actor model via Temporal workflows**](https://temporal.io/resources/on-demand/actor-workflows-reliably-orchestrating-thousands-of-flink-clusters-at) — each Flink deployment gets a dedicated long-running actor that serializes all operations and maintains version history.
 
 ```mermaid
 flowchart TD
-    Client["CLI / API / automation"] --> API["Go control API"]
-    API --> Cluster["ClusterActor"]
-    API --> Deployment["DeploymentActor"]
+    Client["SDK / CLI / CI Pipeline"] --> API["Maestro API Server"]
+    API --> Cluster["ClusterActor<br/>(per namespace)"]
+    API --> Deployment["DeploymentActor<br/>(per Flink job)"]
     Deployment --> Savepoint["SavepointWorkflow"]
     Deployment --> Rollout["RolloutWorkflow"]
     Rollout --> Savepoint
-    Rollout --> Activities["External activities"]
+    Rollout --> Activities["External Activities"]
     Savepoint --> Activities
-    Activities --> Sim["Local simulated adapter"]
-    Activities -. production adapters .-> External["GitOps / Kubernetes / Flink / Prometheus / S3"]
+    Activities --> K8s["Flink Kubernetes Operator"]
+    K8s --> Flink["Flink Jobs"]
+    Activities -.-> Metrics["Prometheus / CloudWatch"]
+    Activities -.-> Storage["S3 / GCS Savepoints"]
 ```
 
-Actor workflow IDs:
-
-- `flink-cluster/<env>/<namespace>`
-- `flink-deployment/<env>/<namespace>/<name>`
-- `flink-rollout/<env>/<namespace>/<name>/<operationId>`
-- `flink-savepoint/<env>/<namespace>/<name>/<operationId>`
-
-## Run locally
-
-Requirements: Go 1.24+, Docker, and Docker Compose.
-
-Start Temporal, PostgreSQL, the worker, and the API:
-
-```bash
-docker compose --profile app up --build
+**Actor Workflow IDs** (stable, one-per-resource):
+```
+flink-cluster/<env>/<namespace>
+flink-deployment/<env>/<namespace>/<name>
+flink-rollout/<env>/<namespace>/<name>/<operationId>
+flink-savepoint/<env>/<namespace>/<name>/<operationId>
 ```
 
-Endpoints:
+## 🚀 Quick Start
 
-- FCP operations console: `http://localhost:8080`
-- Control API: `http://localhost:8080/api/v1`
-- Temporal UI: `http://localhost:8088`
-
-List active deployment actors:
+### Helm Install on EKS
 
 ```bash
-curl 'http://localhost:8080/api/v1/deployments?environment=integration&namespace=streaming&limit=100'
+helm repo add maestro https://maestro-flink.github.io/charts
+helm install maestro maestro/maestro \
+  --namespace maestro-system --create-namespace \
+  --set temporal.enabled=true
 ```
 
-Alternatively, start only Temporal and run the Go processes directly:
+### Register & Deploy Your First Flink Job
 
 ```bash
-docker compose up -d postgresql temporal temporal-ui
-go run ./cmd/worker
-go run ./cmd/control-api
-```
-
-## Example flow
-
-Register the deployment actor:
-
-```bash
-curl -X PUT http://localhost:8080/api/v1/deployments/integration/streaming/orders \
+# Register
+curl -X PUT http://localhost:8080/api/v1/deployments/prod/streaming/orders \
   -H 'Content-Type: application/json' \
-  -d '{"owner":"streaming","serviceAccount":"flink-orders","nodePool":"arm64","flinkDashboardUrl":"http://localhost:8081"}'
-```
+  -d '{"owner":"platform-team","serviceAccount":"flink","nodePool":"default"}'
 
-Deploy a digest-pinned version:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/deployments/integration/streaming/orders/deploy \
+# Deploy
+curl -X POST http://localhost:8080/api/v1/deployments/prod/streaming/orders/deploy \
   -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: deploy-orders-001' \
+  -H 'Idempotency-Key: deploy-001' \
   -d '{
-    "requester":"on-call",
+    "requester":"ci-pipeline",
     "approved":true,
     "spec":{
       "imageDigest":"registry.example/orders@sha256:abc123",
       "flinkVersion":"2.2",
-      "jobArgs":{"source.topic":"orders"},
-      "flinkConfig":{"state.backend.type":"rocksdb"},
       "parallelism":8,
       "maxParallelism":128,
-      "resources":{
-        "taskManagerCpu":2,
-        "taskManagerMemoryMiB":4096,
-        "taskManagerCount":2,
-        "slotsPerManager":4
-      },
-      "stateCompatibility":{
-        "jobGraphCompatible":true,
-        "operatorUidsStable":true
-      }
+      "resources":{"taskManagerCpu":2,"taskManagerMemoryMiB":4096,"taskManagerCount":2,"slotsPerManager":4},
+      "stateCompatibility":{"jobGraphCompatible":true,"operatorUidsStable":true}
     }
   }'
 ```
 
-Inspect durable actor state:
+### Local Development
 
 ```bash
-curl http://localhost:8080/api/v1/deployments/integration/streaming/orders/actor
+# Requirements: Go 1.24+, Docker, Docker Compose
+docker compose --profile app up --build
+
+# Endpoints:
+# Maestro Console:  http://localhost:8080
+# Control API:      http://localhost:8080/api/v1
+# Swagger UI:       http://localhost:8080/swagger
+# Temporal UI:      http://localhost:8088
 ```
 
-Trigger a savepoint:
+## 📦 Multi-Language SDKs
 
+<table>
+<tr>
+<td width="33%">
+
+**Python**
 ```bash
-curl -X POST http://localhost:8080/api/v1/deployments/integration/streaming/orders/savepoint \
-  -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: savepoint-orders-001' \
-  -d '{"requester":"on-call"}'
+pip install maestro-flink-sdk
 ```
 
-Freeze namespace-level mutations:
+```python
+from maestro_sdk import MaestroClient
 
+client = MaestroClient("http://localhost:8080")
+orders = client.deployment("prod", "streaming", "orders")
+orders.deploy(spec, requester="ci")
+orders.wait_healthy(timeout=300)
+```
+
+</td>
+<td width="33%">
+
+**Go**
 ```bash
-curl -X POST http://localhost:8080/api/v1/clusters/integration/streaming/freeze \
-  -H 'Content-Type: application/json' \
-  -d '{"requester":"incident-commander","reason":"active incident"}'
+go get github.com/maestro-flink/maestro-sdk-go
 ```
 
-## Safety behavior
+```go
+client := maestro.NewClient("http://localhost:8080")
+d := client.Deployment("prod", "streaming", "orders")
+d.Deploy(ctx, spec)
+d.WaitHealthy(ctx, 5*time.Minute)
+```
 
-- Every deployment command requires `Idempotency-Key`.
-- Prod operations classified as risky require approval.
-- Max-parallelism decreases are rejected after state exists unless a fresh start is explicitly approved.
-- Job argument, operator UID, job graph, and non-restored-state changes are treated conservatively.
-- Stateful changes create a savepoint before apply.
-- Resource-increasing changes acquire a time-bound lease.
-- A rollout succeeds only after runtime, checkpoint, restart, backpressure, Kafka lag, and sink gates pass.
-- Failed health gates restore the previous healthy version.
-- Savepoints remain allowed while a cluster is frozen; runtime mutations do not.
+</td>
+<td width="34%">
 
-For local failure testing, use an image digest containing `deadbeef`; the simulated metrics adapter will fail health gates and exercise rollback.
+**Java**
+```xml
+<dependency>
+  <groupId>io.maestro</groupId>
+  <artifactId>maestro-sdk</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
 
-## Configuration
+```java
+var client = new MaestroClient("http://localhost:8080");
+var orders = client.deployment("prod", "streaming", "orders");
+orders.deploy(spec, "ci", true, "release v2.3.1");
+```
+
+</td>
+</tr>
+</table>
+
+## 📈 Custom Autoscaler — Replace the Flink Operator Autoscaler
+
+The Flink Kubernetes Operator autoscaler has known stability issues — rescaling storms, flapping under bursty load, opaque decision-making. Maestro gives you full control:
+
+```python
+from maestro_sdk import MaestroClient, AutoscalerBase, ScaleDecision
+
+class KafkaLagAutoscaler(AutoscalerBase):
+    """Scale based on Kafka consumer lag — works with MSK, Confluent, or any Kafka."""
+
+    def evaluate(self, status):
+        lag = status["currentVersion"]["healthSummary"]["kafkaLag"]
+        current = status["currentVersion"]["spec"]["parallelism"]
+
+        if lag > 100_000 and current < 64:
+            return ScaleDecision(min(current * 2, 64), reason=f"lag={lag:,}")
+        if lag < 10_000 and current > 2:
+            return ScaleDecision(max(current // 2, 2), reason="lag low")
+        return None
+
+# Run as Lambda (one-shot), CronJob, or loop
+scaler = KafkaLagAutoscaler(client, "prod", "streaming", "orders")
+scaler.run_loop(interval=60)
+```
+
+Deploy as **AWS Lambda + EventBridge**, **Kubernetes CronJob**, or a **long-running Pod**. Use any metric source: CloudWatch MSK `SumOffsetLag`, Confluent Metrics API, Prometheus, Datadog, or custom business metrics.
+
+See the full [Autoscaling Guide](https://maestro.dev/docs/autoscaling/overview).
+
+## 🆚 Comparison
+
+### Maestro vs AWS Managed Service for Apache Flink
+
+| Feature | AWS MSF | Maestro |
+|---|---|---|
+| Infrastructure | AWS-managed, no cluster access | Any Kubernetes (EKS, GKE, AKS, on-prem) |
+| Flink Version | Managed, months behind | Any version — you control the image |
+| Autoscaling | Basic KPU-based | Custom SDK — any metric, any logic |
+| Rollback | Manual redeploy | One-command with savepoint preservation |
+| State Management | Opaque S3 buckets | You own checkpoints and savepoints |
+| Cost | ~$0.11/KPU-hour | Kubernetes node cost only |
+| Vendor Lock-in | High | **None** |
+| License | Proprietary | **Apache 2.0** |
+
+### Maestro vs Flink Operator Autoscaler
+
+| Feature | Operator Autoscaler | Maestro Autoscaler SDK |
+|---|---|---|
+| Stability | Rescaling storms under bursty load | You control cooldown and thresholds |
+| Metrics | Limited to Flink JMX | Any source (CloudWatch, Prometheus, Confluent) |
+| Logic | Fixed algorithm | Your code, your rules |
+| Observability | Opaque decisions | Full Temporal audit trail |
+| Deployment | Coupled to Operator | Independent Lambda / CronJob / Pod |
+
+## 🔒 Safety Behavior
+
+- Every deployment command requires `Idempotency-Key`
+- Prod operations classified as risky require approval
+- Max-parallelism decreases are rejected after state exists
+- Stateful changes create a savepoint before apply
+- Resource-increasing changes acquire a time-bound capacity lease
+- Failed health gates automatically rollback to the previous healthy version
+- Savepoints remain allowed while a cluster is frozen; runtime mutations do not
+
+## ⚙️ Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -203,12 +257,74 @@ For local failure testing, use an image digest containing `deadbeef`; the simula
 | `SIMULATION_DELAY` | `100ms` | Simulated external call latency |
 | `CONTINUE_AS_NEW_AFTER` | `500` | Commands before actor compaction |
 
-## Development
+## 📚 Documentation
+
+| Resource | Link |
+|---|---|
+| **Getting Started** | [maestro.dev/docs/getting-started](https://maestro.dev/docs/getting-started) |
+| **Architecture** | [maestro.dev/docs/architecture](https://maestro.dev/docs/architecture) |
+| **API Reference (Swagger)** | [maestro.dev/docs/api-reference](https://maestro.dev/docs/api-reference) |
+| **Autoscaling Guide** | [maestro.dev/docs/autoscaling/overview](https://maestro.dev/docs/autoscaling/overview) |
+| **EKS Deployment** | [maestro.dev/docs/eks-deployment](https://maestro.dev/docs/eks-deployment) |
+| **Scaling to 10,000 Jobs** | [docs/SCALING.md](docs/SCALING.md) |
+| **Python SDK** | [maestro.dev/docs/sdk/python](https://maestro.dev/docs/sdk/python) |
+| **Go SDK** | [maestro.dev/docs/sdk/go](https://maestro.dev/docs/sdk/go) |
+| **Java SDK** | [maestro.dev/docs/sdk/java](https://maestro.dev/docs/sdk/java) |
+
+## 🤝 Use as a Library
 
 ```bash
-make verify
+go get github.com/maestro-flink/maestro
 ```
 
-Public compatibility policy is documented in [docs/api-compatibility.md](docs/api-compatibility.md). Contributions follow [CONTRIBUTING.md](CONTRIBUTING.md), project decisions follow [GOVERNANCE.md](GOVERNANCE.md), and vulnerabilities should be reported according to [SECURITY.md](SECURITY.md).
+Implement the `activities.Backend` interface and register with Temporal workers:
+
+```go
+activityWorker := worker.New(temporalClient, "flink-control-activities", worker.Options{})
+maestro.RegisterActivities(activityWorker, backend)
+
+workflowWorker := worker.New(temporalClient, "flink-control-actors", worker.Options{})
+maestro.RegisterWorkflows(workflowWorker)
+```
 
 The `activities.Backend` interface is the production integration boundary. Community adapters may live in this repository or separate modules. Enterprise adapters may remain proprietary while consuming the same public core.
+
+## 📄 License
+
+Maestro is licensed under the **[Apache License 2.0](LICENSE)**.
+
+```
+Copyright 2026 Maestro Contributors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+```
+
+**What this means for you:**
+- ✅ Free to use commercially
+- ✅ Free to modify and distribute
+- ✅ Free to use in proprietary products
+- ✅ Patent grant included
+- ✅ No viral licensing — your extensions stay yours
+
+## 🏛️ Project Status
+
+Maestro is **pre-v1**. Public Go APIs and Temporal contracts may change between minor releases until `v1.0.0`; changes will be documented in [CHANGELOG.md](CHANGELOG.md).
+
+## 🤝 Contributing
+
+Contributions are welcome under the Apache License 2.0. See [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), and [SECURITY.md](SECURITY.md).
+
+---
+
+<div align="center">
+  <p>
+    <a href="https://maestro.dev/docs">📖 Documentation</a> ·
+    <a href="https://maestro.dev/docs/api-reference">🔌 API Reference</a> ·
+    <a href="https://maestro.dev/docs/autoscaling/overview">📈 Autoscaling Guide</a> ·
+    <a href="https://github.com/maestro-flink/maestro/issues">🐛 Report Bug</a>
+  </p>
+</div>

@@ -1,7 +1,7 @@
 apiVersion: v2
-name: fcp
+name: maestro
 description: >-
-  Flink Control Plane (FCP) — Temporal-backed control plane that operates Apache
+  Maestro — Temporal-backed control plane that operates Apache
   Flink jobs via your own Flink Kubernetes Operator. Bring your own operator and
   Flink jobs; point at your own Temporal, or bundle one for trials.
 type: application
@@ -11,6 +11,7 @@ keywords:
   - flink
   - temporal
   - control-plane
-home: https://github.com/as791/Flink-Actor-Control-Plane
+  - maestro
+home: https://github.com/maestro-flink/maestro
 sources:
-  - https://github.com/as791/Flink-Actor-Control-Plane
+  - https://github.com/maestro-flink/maestro

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/domain"
 )
 
 type fakeControl struct {
@@ -35,6 +35,10 @@ func (f *fakeControl) ListDeployments(_ context.Context, options domain.Deployme
 
 func (f *fakeControl) Describe(context.Context, domain.DeploymentIdentity) (domain.DeploymentActorView, error) {
 	return domain.DeploymentActorView{Status: domain.ActorIdle}, nil
+}
+
+func (f *fakeControl) DescribeAll(context.Context) ([]domain.DeploymentCardSummary, error) {
+	return nil, nil
 }
 
 func (f *fakeControl) Versions(context.Context, domain.DeploymentIdentity) ([]domain.DeploymentVersion, error) {
@@ -94,7 +98,7 @@ func TestServesOperationsConsole(t *testing.T) {
 	if contentType := response.Header().Get("Content-Type"); !strings.Contains(contentType, "text/html") {
 		t.Fatalf("expected HTML content type, got %q", contentType)
 	}
-	if !strings.Contains(response.Body.String(), "FCP Operations Console") {
+	if !strings.Contains(response.Body.String(), "Maestro Operations Console") {
 		t.Fatal("expected operations console HTML")
 	}
 }

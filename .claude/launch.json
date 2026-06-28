@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-c", "import http.server, socketserver, os; os.chdir('docs'); handler = http.server.SimpleHTTPRequestHandler; httpd = socketserver.TCPServer(('', 8091), handler); httpd.serve_forever()"],
+      "port": 8091
+    }
+  ]
+}

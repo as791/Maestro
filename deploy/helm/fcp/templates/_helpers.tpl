@@ -1,32 +1,32 @@
 {{/* Common naming helpers */}}
-{{- define "fcp.name" -}}
+{{- define "maestro.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "fcp.fullname" -}}
+{{- define "maestro.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s" (include "fcp.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s" (include "maestro.name" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "fcp.labels" -}}
-app.kubernetes.io/name: {{ include "fcp.name" . }}
+{{- define "maestro.labels" -}}
+app.kubernetes.io/name: {{ include "maestro.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
-{{- define "fcp.serviceAccountName" -}}
+{{- define "maestro.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
-{{- default (printf "%s" (include "fcp.fullname" .)) .Values.serviceAccount.name -}}
+{{- default (printf "%s" (include "maestro.fullname" .)) .Values.serviceAccount.name -}}
 {{- else -}}
 {{- default "default" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "fcp.leaseNamespace" -}}
+{{- define "maestro.leaseNamespace" -}}
 {{- default .Release.Namespace .Values.flink.leaseNamespace -}}
 {{- end -}}
 
@@ -34,9 +34,9 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 Resolve the effective Temporal frontend address. In bundled mode the in-chart
 Temporal service is used; otherwise the operator-supplied address.
 */}}
-{{- define "fcp.temporalAddress" -}}
+{{- define "maestro.temporalAddress" -}}
 {{- if eq .Values.temporal.mode "bundled" -}}
-{{- printf "%s-temporal:7233" (include "fcp.fullname" .) -}}
+{{- printf "%s-temporal:7233" (include "maestro.fullname" .) -}}
 {{- else -}}
 {{- required "temporal.address is required when temporal.mode=external" .Values.temporal.address -}}
 {{- end -}}
@@ -45,9 +45,9 @@ Temporal service is used; otherwise the operator-supplied address.
 {{/*
 Common environment shared by control-api and worker.
 */}}
-{{- define "fcp.commonEnv" -}}
+{{- define "maestro.commonEnv" -}}
 - name: TEMPORAL_ADDRESS
-  value: {{ include "fcp.temporalAddress" . | quote }}
+  value: {{ include "maestro.temporalAddress" . | quote }}
 - name: TEMPORAL_NAMESPACE
   value: {{ .Values.temporal.namespace | quote }}
 - name: ACTOR_TASK_QUEUE

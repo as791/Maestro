@@ -4,75 +4,83 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#09110f">
-  <title>FCP Operations Console</title>
+  <title>Maestro Operations Console</title>
+  <link rel="icon" type="image/png" href="/ui/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="/ui/logo.svg">
+  <link rel="apple-touch-icon" href="/ui/favicon.png">
   <link rel="stylesheet" href="/ui/styles.css">
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <span></span><span></span><span></span>
-        </div>
-        <div>
-          <strong>FCP</strong>
-          <small>Operations console</small>
-        </div>
+
+    <!-- Floating top bar -->
+    <header class="floating-bar">
+      <div class="deploy-switcher">
+        <button id="deploy-switcher-btn" aria-expanded="false" aria-controls="deploy-dropdown">
+          <img src="/ui/logo.svg" class="maestro-logo" width="22" height="22" alt="Maestro" aria-label="Maestro">
+          <span id="switcher-name">Select deployment</span>
+          <small id="switcher-env"></small>
+          <span class="chevron" aria-hidden="true">▾</span>
+        </button>
       </div>
 
-      <nav class="nav" aria-label="Primary navigation">
-        <button class="nav-item active" data-view="overview">
-          <span class="nav-icon" aria-hidden="true">◇</span> Overview
+      <nav class="nav-pill" aria-label="Primary navigation">
+        <button class="nav-item active" data-view="environments" title="View Environments">
+          <span class="nav-icon" aria-hidden="true">⊞</span>
+          <span>Environments</span>
         </button>
-        <button class="nav-item" data-view="deploy">
-          <span class="nav-icon" aria-hidden="true">↑</span> Deploy
+        <button class="nav-item" data-view="overview" title="View Actor Details">
+          <span class="nav-icon" aria-hidden="true">◇</span>
+          <span>Actor</span>
         </button>
-        <button class="nav-item" data-view="history">
-          <span class="nav-icon" aria-hidden="true">≡</span> History
+        <button class="nav-item" data-view="deploy" title="Deploy new version">
+          <span class="nav-icon" aria-hidden="true">↑</span>
+          <span>Deploy</span>
+        </button>
+        <span class="nav-divider" aria-hidden="true"></span>
+        <button class="nav-item" id="auto-refresh-btn" title="Toggle live refresh">
+          <span class="nav-icon" aria-hidden="true">⚡</span>
+          <span>Live</span>
+        </button>
+        <button class="nav-item" id="refresh-button" title="Refresh now">
+          <span class="nav-icon" aria-hidden="true">↻</span>
         </button>
       </nav>
 
-      <div class="sidebar-section">
-        <div class="section-label">
-          <span>Targets</span>
-          <span id="target-count" class="section-count">0</span>
-          <button class="icon-button" id="add-target-button" title="Add target">+</button>
-        </div>
-        <label class="target-search" for="target-search">
-          <span class="sr-only">Filter targets</span>
-          <input id="target-search" type="search" placeholder="Filter by name, env, namespace">
-        </label>
-        <div id="target-list" class="target-list"></div>
+      <div class="bar-right">
+        <button class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode">☀️</button>
+        <div class="avatar" title="Operator">OP</div>
+        <img src="/ui/logo.svg" class="maestro-logo" width="28" height="28" alt="Maestro Logo" style="margin-left: 4px;">
       </div>
+    </header>
 
-      <div class="sidebar-footer">
-        <a href="/healthz" target="_blank" rel="noreferrer">
-          <span class="connection-dot"></span>
-          <span>
-            API connected
-            <small>Same-origin control endpoint</small>
-          </span>
-        </a>
+    <!-- Deployment dropdown panel -->
+    <div class="deploy-dropdown" id="deploy-dropdown">
+      <label class="target-search" for="target-search">
+        <span class="sr-only">Filter deployments</span>
+        <input id="target-search" type="search" placeholder="Filter by name, env, namespace">
+      </label>
+      <div class="deploy-dropdown-meta">
+        <span id="target-count">0</span> deployments
       </div>
-    </aside>
+      <div id="target-list" class="target-list"></div>
+      <button class="button secondary deploy-dropdown-add" id="dropdown-add-btn">+ Add</button>
+    </div>
 
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <div class="eyebrow" id="breadcrumb">Environment / namespace</div>
-          <h1 id="page-title">Deployment overview</h1>
-        </div>
-        <div class="topbar-actions">
-          <span class="last-updated" id="last-updated">Not loaded</span>
-          <button class="button secondary" id="refresh-button">Refresh</button>
-          <button class="button primary" data-open-deploy>New rollout</button>
-        </div>
-      </header>
-
+    <!-- Canvas -->
+    <main class="canvas">
       <div id="flash" class="flash" role="status" aria-live="polite"></div>
 
-      <section class="view active" id="overview-view">
-        <div class="identity-strip">
+      <!-- Environments home -->
+      <section class="view active" id="environments-view">
+        <div id="env-grid" class="env-grid">
+          <div class="empty-state" style="padding:60px 0">Loading environments…</div>
+        </div>
+      </section>
+
+      <!-- Actor detail (tabbed dashboard) -->
+      <section class="view" id="overview-view">
+        <div class="identity-strip compact">
           <div>
             <span class="status-badge neutral" id="actor-status">UNKNOWN</span>
             <h2 id="deployment-name">Select a deployment</h2>
@@ -84,103 +92,172 @@
             <button class="button secondary" data-command="savepoint">Savepoint</button>
             <button class="button secondary" data-command="suspend">Suspend</button>
             <button class="button secondary" data-command="resume">Resume</button>
+            <button class="button primary" data-open-deploy>New rollout</button>
             <button class="button danger" data-open-rollback>Rollback</button>
           </div>
         </div>
 
-        <div class="metrics-grid">
-          <article class="metric-card">
-            <span>Current version</span>
-            <strong id="metric-version">—</strong>
-            <small id="metric-image">No version reported</small>
-          </article>
-          <article class="metric-card">
-            <span>Parallelism</span>
-            <strong id="metric-parallelism">—</strong>
-            <small id="metric-slots">No resource shape</small>
-          </article>
-          <article class="metric-card">
-            <span>Health</span>
-            <strong id="metric-health">—</strong>
-            <small id="metric-health-detail">Awaiting actor state</small>
-          </article>
-          <article class="metric-card">
-            <span>Pending operations</span>
-            <strong id="metric-pending">—</strong>
-            <small id="metric-autoscaler">Autoscaler unknown</small>
-          </article>
+        <!-- Health status strip -->
+        <div class="status-strip" id="health-ledger">
+          <div class="ledger-item"><span class="ledger-dot neutral"></span><span>Running</span><strong id="ledger-running">—</strong></div>
+          <div class="ledger-item"><span class="ledger-dot neutral"></span><span>Checkpoint</span><strong id="ledger-checkpoint">—</strong></div>
+          <div class="ledger-item"><span class="ledger-dot neutral"></span><span>Sink</span><strong id="ledger-sink">—</strong></div>
+          <div class="ledger-item"><span class="ledger-dot neutral"></span><span>Restarts</span><strong id="ledger-restarts">—</strong></div>
+          <div class="ledger-item"><span class="ledger-dot neutral"></span><span>Backpressure</span><strong id="ledger-bp">—</strong></div>
+          <div class="ledger-item"><span class="ledger-dot neutral"></span><span>Lag</span><strong id="ledger-lag">—</strong></div>
+          <div class="ledger-item ledger-cluster"><span class="ledger-dot neutral" id="ledger-freeze-dot"></span><span>Namespace</span><strong id="ledger-freeze">—</strong></div>
         </div>
 
-        <div class="content-grid">
-          <article class="panel runtime-panel">
-            <div class="panel-header">
-              <div>
-                <span class="panel-kicker">Runtime</span>
-                <h3>Health gates</h3>
-              </div>
-              <span class="status-badge neutral" id="runtime-badge">NO DATA</span>
-            </div>
-            <div class="health-grid" id="health-grid">
-              <div class="health-item"><span>Running</span><strong>—</strong></div>
-              <div class="health-item"><span>Checkpoint</span><strong>—</strong></div>
-              <div class="health-item"><span>Sink</span><strong>—</strong></div>
-              <div class="health-item"><span>Restarts</span><strong>—</strong></div>
-              <div class="health-item"><span>Backpressure</span><strong>—</strong></div>
-              <div class="health-item"><span>Kafka lag</span><strong>—</strong></div>
-            </div>
-          </article>
+        <!-- Sub-tabs within Actor view -->
+        <nav class="actor-tabs" aria-label="Actor detail tabs">
+          <button class="actor-tab active" data-actor-tab="tab-overview">Overview</button>
+          <button class="actor-tab" data-actor-tab="tab-operations">Operations</button>
+          <button class="actor-tab" data-actor-tab="tab-versions">Versions</button>
+          <button class="actor-tab" data-actor-tab="tab-config">Config</button>
+        </nav>
 
-          <article class="panel span-2 cluster-panel">
-            <div class="panel-header">
-              <div>
-                <span class="panel-kicker">Namespace guardrail</span>
-                <h3>Cluster freeze</h3>
-              </div>
-              <span class="status-badge neutral" id="cluster-status">UNKNOWN</span>
-            </div>
-            <p class="panel-copy" id="cluster-detail">
-              Load a target to inspect namespace mutation controls.
-            </p>
-            <div class="button-row">
-              <button class="button danger" id="freeze-button">Freeze</button>
-              <button class="button secondary" id="unfreeze-button">Unfreeze</button>
-            </div>
-          </article>
+        <!-- Tab: Overview -->
+        <div class="actor-tab-panel active" id="tab-overview">
+          <div class="metrics-grid">
+            <article class="metric-card">
+              <span>Current version</span>
+              <strong id="metric-version">—</strong>
+              <small id="metric-image">No version reported</small>
+            </article>
+            <article class="metric-card">
+              <span>Parallelism</span>
+              <strong id="metric-parallelism">—</strong>
+              <small id="metric-slots">No resource shape</small>
+            </article>
+            <article class="metric-card">
+              <span>Health</span>
+              <strong id="metric-health">—</strong>
+              <small id="metric-health-detail">Awaiting actor state</small>
+            </article>
+            <article class="metric-card">
+              <span>Pending operations</span>
+              <strong id="metric-pending">—</strong>
+              <small id="metric-autoscaler">Autoscaler unknown</small>
+            </article>
+          </div>
 
-          <article class="panel span-2">
+          <div class="content-grid" style="margin-top:14px">
+            <article class="panel span-2 cluster-panel">
+              <div class="panel-header">
+                <div>
+                  <span class="panel-kicker">Environment Protection</span>
+                  <h3 style="display: flex; align-items: center; gap: 6px;">
+                    Namespace Guardrail
+                    <span class="info-tooltip" data-tooltip="Freezing the namespace prevents deployments, rollbacks, or state mutations here. Use this during an incident to stop accidental changes.">ⓘ</span>
+                  </h3>
+                </div>
+                <span class="status-badge neutral" id="cluster-status">UNKNOWN</span>
+              </div>
+              <p class="panel-copy" id="cluster-detail">
+                Load a target to inspect namespace mutation controls.
+              </p>
+              <div class="button-row" style="margin-top: 12px;">
+                <button class="button danger" id="freeze-button">Lock (Freeze)</button>
+                <button class="button secondary" id="unfreeze-button">Unlock (Unfreeze)</button>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <span class="panel-kicker">State recovery</span>
+                  <h3>Latest savepoint</h3>
+                </div>
+              </div>
+              <div id="savepoint-card" class="savepoint-card">
+                <strong>No savepoint</strong>
+                <p>The actor has not reported a savepoint.</p>
+              </div>
+              <div class="maintenance-actions">
+                <span class="panel-kicker">Actor maintenance</span>
+                <button class="text-button" data-command="autoscaler-enable">Enable autoscaler</button>
+                <button class="text-button" data-command="autoscaler-freeze">Freeze autoscaler</button>
+                <button class="text-button" data-command="continue-as-new">Compact history</button>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Tab: Operations -->
+        <div class="actor-tab-panel" id="tab-operations">
+          <article class="panel">
             <div class="panel-header">
               <div>
                 <span class="panel-kicker">Actor journal</span>
-                <h3>Recent operations</h3>
+                <h3>All operations</h3>
               </div>
-              <button class="text-button" data-view-link="history">View all versions →</button>
             </div>
             <div class="operation-list" id="operation-list">
               <div class="empty-state">No actor loaded.</div>
             </div>
           </article>
+        </div>
 
+        <!-- Tab: Versions -->
+        <div class="actor-tab-panel" id="tab-versions">
           <article class="panel">
             <div class="panel-header">
               <div>
-                <span class="panel-kicker">State recovery</span>
-                <h3>Latest savepoint</h3>
+                <span class="panel-kicker">Deployment archive</span>
+                <h3>Recorded versions</h3>
               </div>
+              <button class="button secondary" id="load-versions-button">Reload</button>
             </div>
-            <div id="savepoint-card" class="savepoint-card">
-              <strong>No savepoint</strong>
-              <p>The actor has not reported a savepoint.</p>
-            </div>
-            <div class="maintenance-actions">
-              <span class="panel-kicker">Actor maintenance</span>
-              <button class="text-button" data-command="autoscaler-enable">Enable autoscaler</button>
-              <button class="text-button" data-command="autoscaler-freeze">Freeze autoscaler</button>
-              <button class="text-button" data-command="continue-as-new">Compact history</button>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Version</th>
+                    <th>Created</th>
+                    <th>Image</th>
+                    <th>Parallelism</th>
+                    <th>Health</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="versions-table">
+                  <tr><td colspan="6" class="empty-cell">Select a deployment to load versions.</td></tr>
+                </tbody>
+              </table>
             </div>
           </article>
         </div>
+
+        <!-- Tab: Config -->
+        <div class="actor-tab-panel" id="tab-config">
+          <div class="content-grid">
+            <article class="panel span-2">
+              <div class="panel-header">
+                <div>
+                  <span class="panel-kicker">Active specification</span>
+                  <h3>Current deployment config</h3>
+                </div>
+              </div>
+              <div id="config-spec" class="config-spec">
+                <div class="empty-state">No active version.</div>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <span class="panel-kicker">Autoscaler</span>
+                  <h3>Scaling policy</h3>
+                </div>
+              </div>
+              <div id="config-autoscaler" class="config-detail">
+                <div class="empty-state">No data.</div>
+              </div>
+            </article>
+          </div>
+        </div>
       </section>
 
+      <!-- Deploy form -->
       <section class="view" id="deploy-view">
         <div class="form-layout">
           <form class="panel deployment-form" id="deploy-form">
@@ -269,62 +346,63 @@
         </div>
       </section>
 
-      <section class="view" id="history-view">
-        <div class="content-grid">
-          <article class="panel span-3">
-            <div class="panel-header">
-              <div>
-                <span class="panel-kicker">Deployment archive</span>
-                <h3>Recorded versions</h3>
-              </div>
-              <button class="button secondary" id="load-versions-button">Reload versions</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Version</th>
-                    <th>Created</th>
-                    <th>Image</th>
-                    <th>Parallelism</th>
-                    <th>Health</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="versions-table">
-                  <tr><td colspan="6" class="empty-cell">Select a deployment to load versions.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-      </section>
     </main>
+
+    <!-- Bottom bar -->
+    <footer class="bottom-bar">
+      <span class="last-updated" id="last-updated">Not loaded</span>
+      <a href="/healthz" target="_blank" rel="noreferrer">
+        <span class="connection-dot"></span> API connected
+      </a>
+      <a href="/auth/logout" class="logout-link">Sign out</a>
+    </footer>
+
   </div>
 
+  <!-- Command palette -->
+  <dialog id="cmd-palette">
+    <div class="cmd-palette-inner">
+      <input type="text" id="cmd-search" placeholder="Type a command..." autofocus>
+      <div id="cmd-results" class="cmd-results"></div>
+    </div>
+  </dialog>
+
+  <!-- Register / edit target dialog -->
   <dialog id="target-dialog">
     <form method="dialog" id="target-form">
       <div class="dialog-header">
         <div>
           <span class="panel-kicker">Actor identity</span>
-          <h3>Add deployment target</h3>
+          <h3>Register deployment</h3>
         </div>
         <button class="icon-button" value="cancel" formnovalidate aria-label="Close">×</button>
       </div>
+
+      <div class="yaml-import">
+        <label class="span-2">Import from YAML <small>GitHub raw URL to a FlinkDeployment manifest</small>
+          <div class="yaml-input-row">
+            <input name="yamlUrl" type="url" placeholder="https://raw.githubusercontent.com/org/repo/main/deploy.yaml">
+            <button type="button" id="fetch-yaml-btn" class="button secondary">Fetch &amp; import</button>
+          </div>
+        </label>
+        <div class="yaml-divider"><span>or fill in manually</span></div>
+      </div>
+
       <label>Environment <input name="environment" value="integration" required></label>
       <label>Namespace <input name="namespace" value="streaming" required></label>
       <label>Deployment name <input name="name" placeholder="orders" required></label>
-      <label>Owner <input name="owner" placeholder="streaming"></label>
+      <label>Owner <input name="owner" placeholder="streaming-team"></label>
       <label>Service account <input name="serviceAccount" placeholder="flink-orders"></label>
       <label>Node pool <input name="nodePool" value="default"></label>
       <label>Flink dashboard URL <input name="flinkDashboardUrl" type="url" placeholder="http://localhost:8081"></label>
       <div class="dialog-actions">
         <button class="button secondary" value="cancel" formnovalidate>Cancel</button>
-        <button class="button primary" value="default">Register target</button>
+        <button class="button primary" value="default">Register &amp; start actor</button>
       </div>
     </form>
   </dialog>
 
+  <!-- Command / action dialog -->
   <dialog id="action-dialog">
     <form method="dialog" id="action-form">
       <div class="dialog-header">

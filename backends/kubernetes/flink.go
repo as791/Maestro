@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -29,9 +29,9 @@ var (
 // Reserved JobArgs keys that configure the FlinkDeployment job spec rather than
 // being passed through as program arguments.
 const (
-	argJarURI     = "fcp.jarURI"
-	argEntryClass = "fcp.entryClass"
-	argJMMemory   = "fcp.jobManagerMemory"
+	argJarURI     = "maestro.jarURI"
+	argEntryClass = "maestro.entryClass"
+	argJMMemory   = "maestro.jobManagerMemory"
 	defaultJarURI = "local:///opt/flink/usrlib/job.jar"
 )
 
@@ -49,12 +49,14 @@ func flinkVersionEnum(version string) string {
 }
 
 // upgradeMode selects the operator upgrade strategy for an apply.
-//   - no previous version              -> stateless (fresh start)
-//   - incident direct-patch            -> last-state (fastest, claims local state)
-//   - normal stateful redeploy         -> savepoint (take a savepoint, restore from it)
+//   - no previous version / fresh start approved -> stateless
+//   - incident direct-patch                      -> last-state (fastest, claims HA state)
+//   - normal stateful redeploy                   -> savepoint (cancel-with-savepoint, restore)
 func upgradeMode(input activities.ApplyDeploymentInput) string {
 	switch {
 	case input.Previous == nil:
+		return "stateless"
+	case input.Version.Spec.State.FreshStartApproved:
 		return "stateless"
 	case input.Incident && !input.GitOpsOnly:
 		return "last-state"
@@ -75,7 +77,7 @@ func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[st
 		flinkConfig[k] = v
 	}
 	flinkConfig["pipeline.max-parallelism"] = strconv.Itoa(spec.MaxParallelism)
-	flinkConfig["taskmanager.numberOfTaskSlots"] = strconv.Itoa(maxInt(spec.Resources.SlotsPerManager, 1))
+	flinkConfig["taskmanager.numberOfTaskSlots"] = strconv.Itoa(max(spec.Resources.SlotsPerManager, 1))
 	if localStoragePath != "" {
 		setIfAbsent(flinkConfig, "high-availability.type", "kubernetes")
 		setIfAbsent(flinkConfig, "high-availability.storageDir", "file:///flink-data/ha")
@@ -95,6 +97,9 @@ func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[st
 	if entry := spec.JobArgs[argEntryClass]; entry != "" {
 		job["entryClass"] = entry
 	}
+	if spec.State.AllowNonRestored {
+		job["allowNonRestoredState"] = true
+	}
 	if args := programArgs(spec.JobArgs); len(args) > 0 {
 		job["args"] = args
 	}
@@ -109,12 +114,12 @@ func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[st
 			"name":      input.Identity.Name,
 			"namespace": input.Identity.Namespace,
 			"labels": map[string]interface{}{
-				"app.kubernetes.io/managed-by": "fcp",
-				"fcp.flink/environment":        input.Identity.Environment,
-				"fcp.flink/node-pool":          stringOr(input.Identity.NodePool, "default"),
+				"app.kubernetes.io/managed-by": "maestro",
+				"maestro.flink/environment":    input.Identity.Environment,
+				"maestro.flink/node-pool":      stringOr(input.Identity.NodePool, "default"),
 			},
 			"annotations": map[string]interface{}{
-				"fcp.flink/version-id": strconv.FormatInt(input.Version.VersionID, 10),
+				"maestro.flink/version-id": strconv.FormatInt(input.Version.VersionID, 10),
 			},
 		},
 		"spec": map[string]interface{}{
@@ -124,14 +129,14 @@ func buildFlinkDeployment(input activities.ApplyDeploymentInput, defaults map[st
 			"serviceAccount":     stringOr(input.Identity.ServiceAccount, "flink"),
 			"jobManager": map[string]interface{}{
 				"resource": map[string]interface{}{
-					"memory": stringOr(spec.JobArgs["fcp.jobManagerMemory"], "1024m"),
+					"memory": stringOr(spec.JobArgs["maestro.jobManagerMemory"], "1024m"),
 					"cpu":    float64(1),
 				},
 			},
 			"taskManager": map[string]interface{}{
-				"replicas": int64(maxInt(spec.Resources.TaskManagerCount, 1)),
+				"replicas": int64(max(spec.Resources.TaskManagerCount, 1)),
 				"resource": map[string]interface{}{
-					"memory": fmt.Sprintf("%dm", maxInt64(spec.Resources.TaskManagerMemory, 1024)),
+					"memory": fmt.Sprintf("%dm", max(spec.Resources.TaskManagerMemory, int64(1024))),
 					"cpu":    spec.Resources.TaskManagerCPU,
 				},
 			},
@@ -208,7 +213,7 @@ func buildStateSnapshot(name string, identity domain.DeploymentIdentity) *unstru
 			"name":      name,
 			"namespace": identity.Namespace,
 			"labels": map[string]interface{}{
-				"app.kubernetes.io/managed-by": "fcp",
+				"app.kubernetes.io/managed-by": "maestro",
 			},
 		},
 		"spec": map[string]interface{}{
@@ -270,16 +275,3 @@ func stringOr(value, fallback string) string {
 	return value
 }
 
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func maxInt64(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
-}

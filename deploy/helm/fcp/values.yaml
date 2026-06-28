@@ -1,6 +1,6 @@
-# Default values for FCP.
+# Default values for Maestro.
 # Onboarding model: you bring your own Flink Kubernetes Operator and Flink jobs.
-# This chart installs only the FCP control plane (control-api + worker) and the
+# This chart installs only the Maestro control plane (control-api + worker) and the
 # RBAC it needs to manage FlinkDeployments in your namespaces.
 
 nameOverride: ""
@@ -10,12 +10,12 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
   controlApi:
-    repository: ghcr.io/as791/fcp-control-api
+    repository: ghcr.io/maestro-flink/maestro-control-api
     tag: latest
   worker:
     # The worker MUST be the Kubernetes-backed image (backends/kubernetes), not
     # the simulated core worker.
-    repository: ghcr.io/as791/fcp-k8s-worker
+    repository: ghcr.io/maestro-flink/maestro-k8s-worker
     tag: latest
 
 controlApi:
@@ -74,7 +74,7 @@ taskQueue:
   shards: 1                        # see docs/SCALING.md for sharding at 10k jobs
 
 flink:
-  # Namespaces (your own) where FCP creates/manages FlinkDeployments. RBAC is
+  # Namespaces (your own) where Maestro creates/manages FlinkDeployments. RBAC is
   # granted only in these namespaces unless rbac.clusterScope=true.
   watchNamespaces:
     - streaming
@@ -90,7 +90,7 @@ serviceAccount:
   name: ""
   annotations: {}
     # EKS IRSA example:
-    # eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/fcp-control-plane
+    # eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/maestro-control-plane
 
 rbac:
   create: true
@@ -105,7 +105,7 @@ ingress:
     host: temporal.localhost
   controlApi:
     enabled: false
-    host: fcp.localhost
+    host: maestro.localhost
 
 podAnnotations: {}
 nodeSelector: {}

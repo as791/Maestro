@@ -1,4 +1,4 @@
-package com.example.fcp;
+package com.example.maestro;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,7 +16,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 
 /**
- * Sample Flink 2.2 streaming job for the FCP control-plane demo.
+ * Sample Flink 2.2 streaming job for the Maestro control-plane demo.
  *
  * <p>Reads Wikimedia "recentchange" events from Kafka, counts edits per wiki in
  * a one-minute tumbling window, and writes the counts back to Kafka. It is
@@ -29,7 +29,7 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTime
  *   <li>{@code --bootstrap.servers} Kafka bootstrap servers</li>
  *   <li>{@code --source.topic} input topic (default wikimedia.recentchange)</li>
  *   <li>{@code --sink.topic} output topic (default wikimedia.edit-counts)</li>
- *   <li>{@code --group.id} consumer group (default fcp-wiki-edit-count)</li>
+ *   <li>{@code --group.id} consumer group (default maestro-wiki-edit-count)</li>
  * </ul>
  */
 public final class WikiEditCount {
@@ -40,9 +40,9 @@ public final class WikiEditCount {
 
     public static void main(String[] args) throws Exception {
         final Map<String, String> params = parseArgs(args);
-        final String brokers = params.getOrDefault("bootstrap.servers", "fcp-kafka-bootstrap.kafka.svc:9092");
+        final String brokers = params.getOrDefault("bootstrap.servers", "maestro-kafka-bootstrap.kafka.svc:9092");
         final String sourceTopic = params.getOrDefault("source.topic", "wikimedia.recentchange");
-        final String groupId = params.getOrDefault("group.id", "fcp-wiki-edit-count");
+        final String groupId = params.getOrDefault("group.id", "maestro-wiki-edit-count");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // Checkpointing makes savepoint / last-state upgrade modes meaningful.
@@ -72,7 +72,7 @@ public final class WikiEditCount {
 
         counts.print();
 
-        env.execute("fcp-wiki-edit-count");
+        env.execute("maestro-wiki-edit-count");
     }
 
     /** Parses {@code --key value} program arguments into a map. */

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -161,7 +161,7 @@ func TestObserveSavepointCompleted(t *testing.T) {
 
 func TestLeaseStoreBudget(t *testing.T) {
 	core := corefake.NewSimpleClientset()
-	store := newLeaseStore(core, "fcp-system", 10)
+	store := newLeaseStore(core, "maestro-system", 10)
 	ctx := context.Background()
 	input := activities.AcquireLeaseInput{
 		Identity:  testIdentity(),

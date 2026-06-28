@@ -3,8 +3,8 @@ package workflows
 import (
 	"fmt"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -95,7 +95,7 @@ func processCommand(ctx workflow.Context, state *domain.DeploymentActorState, ac
 			state.Status = domain.ActorSuspended
 		}
 	case domain.CommandResume:
-		err = setState(ctx, state, "RUNNING")
+		err = resume(ctx, state, activityTaskQueue)
 	case domain.CommandRollback:
 		err = rollback(ctx, state, activityTaskQueue, command, &record)
 	case domain.CommandScaleTo:
@@ -222,6 +222,24 @@ func rollback(ctx workflow.Context, state *domain.DeploymentActorState, activity
 	rollbackCommand.TargetSpec = &spec
 	rollbackCommand.Approved = true
 	return deploy(ctx, state, activityTaskQueue, rollbackCommand, record)
+}
+
+func resume(ctx workflow.Context, state *domain.DeploymentActorState, activityTaskQueue string) error {
+	if err := setState(ctx, state, "RUNNING"); err != nil {
+		return err
+	}
+	if state.CurrentVersion == nil {
+		return nil
+	}
+	var health domain.HealthSummary
+	if err := workflow.ExecuteActivity(ctx, activities.NameObserveDeployment, activities.ObserveDeploymentInput{
+		Identity: state.Identity,
+		Version:  *state.CurrentVersion,
+	}).Get(ctx, &health); err != nil {
+		return err
+	}
+	state.CurrentVersion.HealthSummary = health
+	return nil
 }
 
 func scale(ctx workflow.Context, state *domain.DeploymentActorState, activityTaskQueue string, command domain.DeploymentCommand, record *domain.OperationRecord) error {

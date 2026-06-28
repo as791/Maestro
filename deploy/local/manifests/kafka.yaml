@@ -7,7 +7,7 @@ metadata:
   name: dual-role
   namespace: kafka
   labels:
-    strimzi.io/cluster: fcp
+    strimzi.io/cluster: maestro
 spec:
   replicas: 1
   roles:
@@ -19,7 +19,7 @@ spec:
 apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
-  name: fcp
+  name: maestro
   namespace: kafka
   annotations:
     strimzi.io/node-pools: enabled
@@ -47,7 +47,7 @@ metadata:
   name: wikimedia.recentchange
   namespace: kafka
   labels:
-    strimzi.io/cluster: fcp
+    strimzi.io/cluster: maestro
 spec:
   partitions: 6
   replicas: 1
@@ -58,7 +58,7 @@ metadata:
   name: wikimedia.edit-counts
   namespace: kafka
   labels:
-    strimzi.io/cluster: fcp
+    strimzi.io/cluster: maestro
 spec:
   partitions: 6
   replicas: 1

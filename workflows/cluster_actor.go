@@ -1,7 +1,7 @@
 package workflows
 
 import (
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/domain"
 	"go.temporal.io/sdk/workflow"
 )
 

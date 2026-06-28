@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,21 +20,20 @@ import (
 // reservations consistent across multiple worker replicas, which an in-process
 // map cannot do once the worker tier is horizontally scaled.
 type leaseStore struct {
-	core        kubernetes.Interface
-	namespace   string
-	slotBudget  int
-	configMapNS string
+	core       kubernetes.Interface
+	namespace  string
+	slotBudget int
 }
 
 func newLeaseStore(core kubernetes.Interface, namespace string, slotBudget int) *leaseStore {
 	if slotBudget <= 0 {
 		slotBudget = 4096
 	}
-	return &leaseStore{core: core, namespace: namespace, slotBudget: slotBudget, configMapNS: namespace}
+	return &leaseStore{core: core, namespace: namespace, slotBudget: slotBudget}
 }
 
 func leaseConfigMapName(nodePool string) string {
-	return "fcp-leases-" + stringOr(nodePool, "default")
+	return "maestro-leases-" + stringOr(nodePool, "default")
 }
 
 func (s *leaseStore) acquire(ctx context.Context, input activities.AcquireLeaseInput, leaseID string) (domain.Lease, error) {
@@ -79,8 +78,8 @@ func (s *leaseStore) release(ctx context.Context, leaseID string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// The lease ID encodes the node pool as the prefix-free suffix is unknown
 		// here, so we scan the known pools' ConfigMaps lazily by listing.
-		cms, err := s.core.CoreV1().ConfigMaps(s.configMapNS).List(ctx, metav1.ListOptions{
-			LabelSelector: "app.kubernetes.io/managed-by=fcp,fcp.flink/store=leases",
+		cms, err := s.core.CoreV1().ConfigMaps(s.namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/managed-by=maestro,maestro.flink/store=leases",
 		})
 		if err != nil {
 			return err
@@ -91,7 +90,7 @@ func (s *leaseStore) release(ctx context.Context, leaseID string) error {
 				continue
 			}
 			delete(cm.Data, leaseID)
-			_, err := s.core.CoreV1().ConfigMaps(s.configMapNS).Update(ctx, cm, metav1.UpdateOptions{})
+			_, err := s.core.CoreV1().ConfigMaps(s.namespace).Update(ctx, cm, metav1.UpdateOptions{})
 			return err
 		}
 		return nil
@@ -100,28 +99,28 @@ func (s *leaseStore) release(ctx context.Context, leaseID string) error {
 
 func (s *leaseStore) load(ctx context.Context, nodePool string) (*corev1.ConfigMap, map[string]domain.Lease, error) {
 	name := leaseConfigMapName(nodePool)
-	cm, err := s.core.CoreV1().ConfigMaps(s.configMapNS).Get(ctx, name, metav1.GetOptions{})
+	cm, err := s.core.CoreV1().ConfigMaps(s.namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: s.configMapNS,
+				Namespace: s.namespace,
 				Labels: map[string]string{
-					"app.kubernetes.io/managed-by": "fcp",
-					"fcp.flink/store":              "leases",
-					"fcp.flink/node-pool":          nodePool,
+					"app.kubernetes.io/managed-by": "maestro",
+					"maestro.flink/store":          "leases",
+					"maestro.flink/node-pool":      nodePool,
 				},
 			},
 			Data: map[string]string{},
 		}
-		created, createErr := s.core.CoreV1().ConfigMaps(s.configMapNS).Create(ctx, cm, metav1.CreateOptions{})
+		created, createErr := s.core.CoreV1().ConfigMaps(s.namespace).Create(ctx, cm, metav1.CreateOptions{})
 		if createErr != nil && !apierrors.IsAlreadyExists(createErr) {
 			return nil, nil, createErr
 		}
 		if createErr == nil {
 			cm = created
 		} else {
-			cm, err = s.core.CoreV1().ConfigMaps(s.configMapNS).Get(ctx, name, metav1.GetOptions{})
+			cm, err = s.core.CoreV1().ConfigMaps(s.namespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -150,6 +149,6 @@ func (s *leaseStore) save(ctx context.Context, cm *corev1.ConfigMap, leases map[
 		data[id] = string(raw)
 	}
 	cm.Data = data
-	_, err := s.core.CoreV1().ConfigMaps(s.configMapNS).Update(ctx, cm, metav1.UpdateOptions{})
+	_, err := s.core.CoreV1().ConfigMaps(s.namespace).Update(ctx, cm, metav1.UpdateOptions{})
 	return err
 }

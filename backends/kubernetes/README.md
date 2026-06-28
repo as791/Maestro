@@ -1,11 +1,11 @@
-# FCP Kubernetes backend
+# Maestro Kubernetes backend
 
 A real `activities.Backend` implementation that drives the [Apache Flink Kubernetes
 Operator](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-release-1.15/)
 (>= 1.15). It reconciles `FlinkDeployment` and `FlinkStateSnapshot` custom resources so
-that the deterministic FCP control-plane workflows operate **real** Flink jobs.
+that the deterministic Maestro control-plane workflows operate **real** Flink jobs.
 
-It is a separate Go module so the public FCP core library keeps no `client-go` dependency.
+It is a separate Go module so the public Maestro core library keeps no `client-go` dependency.
 
 ## What each activity does
 
@@ -29,7 +29,7 @@ per call — this is what keeps the adapter viable at thousands of concurrent jo
 go build ./backends/kubernetes/...
 
 # container image (build context = repo root)
-docker build -f backends/kubernetes/Dockerfile -t fcp-k8s-worker .
+docker build -f backends/kubernetes/Dockerfile -t maestro-k8s-worker .
 ```
 
 ### Configuration (environment)
@@ -42,7 +42,7 @@ docker build -f backends/kubernetes/Dockerfile -t fcp-k8s-worker .
 | `TEMPORAL_TLS` | `false` | Force TLS to the frontend |
 | `ACTOR_TASK_QUEUE` | `flink-control-actors` | Actor + child workflows |
 | `ACTIVITY_TASK_QUEUE` | `flink-control-activities` | External I/O activities |
-| `FLINK_LEASE_NAMESPACE` | `fcp-system` | Namespace for capacity-lease ConfigMaps |
+| `FLINK_LEASE_NAMESPACE` | `maestro-system` | Namespace for capacity-lease ConfigMaps |
 | `FLINK_SLOT_BUDGET` | `4096` | Max reserved task slots per node pool |
 | `KUBE_CLIENT_QPS` / `KUBE_CLIENT_BURST` | `50` / `100` | API client rate limits |
 | `WORKER_MAX_CONCURRENT_ACTIVITIES` | `200` | Activity concurrency per worker |

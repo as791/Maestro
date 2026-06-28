@@ -1,6 +1,6 @@
 {{- if .Values.rbac.create -}}
-{{- $fullname := include "fcp.fullname" . -}}
-{{- $saName := include "fcp.serviceAccountName" . -}}
+{{- $fullname := include "maestro.fullname" . -}}
+{{- $saName := include "maestro.serviceAccountName" . -}}
 {{- $saNamespace := .Release.Namespace -}}
 {{- $rules := list
   (dict "apiGroups" (list "flink.apache.org") "resources" (list "flinkdeployments" "flinkdeployments/status" "flinkstatesnapshots" "flinkstatesnapshots/status") "verbs" (list "get" "list" "watch" "create" "update" "patch" "delete"))
@@ -14,7 +14,7 @@ kind: ClusterRole
 metadata:
   name: {{ $fullname }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
 rules:
   {{- toYaml $rules | nindent 2 }}
 ---
@@ -23,7 +23,7 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ $fullname }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -34,7 +34,7 @@ subjects:
     namespace: {{ $saNamespace }}
 {{- else }}
 {{- $namespaces := .Values.flink.watchNamespaces | default list -}}
-{{- $leaseNs := include "fcp.leaseNamespace" . -}}
+{{- $leaseNs := include "maestro.leaseNamespace" . -}}
 {{- $namespaces = append $namespaces $leaseNs | uniq -}}
 {{- range $ns := $namespaces }}
 ---
@@ -44,7 +44,7 @@ metadata:
   name: {{ $fullname }}
   namespace: {{ $ns }}
   labels:
-    {{- include "fcp.labels" $ | nindent 4 }}
+    {{- include "maestro.labels" $ | nindent 4 }}
 rules:
   {{- toYaml $rules | nindent 2 }}
 ---
@@ -54,7 +54,7 @@ metadata:
   name: {{ $fullname }}
   namespace: {{ $ns }}
   labels:
-    {{- include "fcp.labels" $ | nindent 4 }}
+    {{- include "maestro.labels" $ | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

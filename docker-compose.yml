@@ -67,4 +67,4 @@ services:
 volumes:
   temporal-postgres:
 
-name: fcp
+name: maestro

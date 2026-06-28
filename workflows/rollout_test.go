@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/testsuite"
 )

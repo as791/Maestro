@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flink-control-plane/fcp"
-	"github.com/flink-control-plane/fcp/domain"
-	"github.com/flink-control-plane/fcp/workflows"
+	"github.com/maestro-flink/maestro"
+	"github.com/maestro-flink/maestro/domain"
+	"github.com/maestro-flink/maestro/workflows"
 	"go.temporal.io/api/serviceerror"
 	workflowservice "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
@@ -39,7 +39,7 @@ func NewService(temporalClient client.Client, actorTaskQueue, activityTaskQueue 
 
 // actorQueueFor returns the sharded actor task queue that owns a workflow ID.
 func (s *Service) actorQueueFor(workflowID string) string {
-	return fcp.ShardTaskQueue(s.actorTaskQueue, s.actorShards, workflowID)
+	return maestro.ShardTaskQueue(s.actorTaskQueue, s.actorShards, workflowID)
 }
 
 func (s *Service) EnsureDeploymentActor(ctx context.Context, identity domain.DeploymentIdentity, policy *domain.Policy) error {
@@ -289,11 +289,53 @@ func encodeDeploymentListCursor(cursor deploymentListCursor) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(data), nil
 }
 
-func mutatesRuntime(commandType domain.CommandType) bool {
-	switch commandType {
-	case domain.CommandRequestSavepoint, domain.CommandContinueAsNew:
-		return false
-	default:
-		return true
+func (s *Service) DescribeAll(ctx context.Context) ([]domain.DeploymentCardSummary, error) {
+	list, err := s.ListDeployments(ctx, domain.DeploymentListOptions{Limit: 500})
+	if err != nil {
+		return nil, err
 	}
+	cards := make([]domain.DeploymentCardSummary, len(list.Deployments))
+	type result struct {
+		index int
+		view  domain.DeploymentActorView
+		err   error
+	}
+	ch := make(chan result, len(list.Deployments))
+	for i, dep := range list.Deployments {
+		go func(idx int, d domain.DeploymentSummary) {
+			view, err := s.Describe(ctx, d.Identity)
+			ch <- result{idx, view, err}
+		}(i, dep)
+	}
+	for range list.Deployments {
+		r := <-ch
+		dep := list.Deployments[r.index]
+		card := domain.DeploymentCardSummary{
+			Identity:   dep.Identity,
+			WorkflowID: dep.WorkflowID,
+			StartedAt:  dep.StartedAt,
+		}
+		if r.err != nil {
+			card.Status = domain.ActorStatus("UNREACHABLE")
+			card.Error = r.err.Error()
+		} else {
+			card.Status = r.view.Status
+			card.Pending = r.view.PendingOperations
+			card.Error = r.view.LastError
+			if v := r.view.CurrentVersion; v != nil {
+				card.Version = v.VersionID
+				card.ImageDigest = v.Spec.ImageDigest
+				card.Parallelism = v.Spec.Parallelism
+				h := v.HealthSummary.Healthy
+				card.Healthy = &h
+				card.HealthMessage = v.HealthSummary.Message
+			}
+		}
+		cards[r.index] = card
+	}
+	return cards, nil
+}
+
+func mutatesRuntime(commandType domain.CommandType) bool {
+	return commandType != domain.CommandRequestSavepoint && commandType != domain.CommandContinueAsNew
 }

@@ -1,10 +1,10 @@
-module github.com/flink-control-plane/fcp/backends/kubernetes
+module github.com/maestro-flink/maestro/backends/kubernetes
 
 go 1.24.0
 
 require (
-	github.com/flink-control-plane/fcp v0.0.0
-	go.temporal.io/sdk v1.45.0
+	github.com/maestro-flink/maestro v0.0.0
+	go.temporal.io/sdk v1.36.0
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.33.0
@@ -64,4 +64,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/flink-control-plane/fcp => ../..
+replace github.com/maestro-flink/maestro => ../..

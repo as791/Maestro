@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "fcp.fullname" . }}-worker
+  name: {{ include "maestro.fullname" . }}-worker
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
     app.kubernetes.io/component: worker
 spec:
   {{- if not .Values.worker.autoscaling.enabled }}
@@ -17,14 +17,14 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fcp.labels" . | nindent 8 }}
+        {{- include "maestro.labels" . | nindent 8 }}
         app.kubernetes.io/component: worker
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "fcp.serviceAccountName" . }}
+      serviceAccountName: {{ include "maestro.serviceAccountName" . }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -34,9 +34,9 @@ spec:
           image: "{{ .Values.image.worker.repository }}:{{ .Values.image.worker.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            {{- include "fcp.commonEnv" . | nindent 12 }}
+            {{- include "maestro.commonEnv" . | nindent 12 }}
             - name: FLINK_LEASE_NAMESPACE
-              value: {{ include "fcp.leaseNamespace" . | quote }}
+              value: {{ include "maestro.leaseNamespace" . | quote }}
             - name: FLINK_WATCH_NAMESPACES
               value: {{ join "," .Values.flink.watchNamespaces | quote }}
             {{- if .Values.flink.localStoragePath }}

@@ -5,7 +5,7 @@ metadata:
   namespace: streaming
   labels:
     app.kubernetes.io/name: wikimedia-producer
-    app.kubernetes.io/managed-by: fcp-sample
+    app.kubernetes.io/managed-by: maestro-sample
 spec:
   replicas: 1
   selector:
@@ -21,7 +21,7 @@ spec:
           image: localhost:5001/wikimedia-producer:latest
           env:
             - name: KAFKA_BROKERS
-              value: "fcp-kafka-bootstrap.kafka.svc:9092"
+              value: "maestro-kafka-bootstrap.kafka.svc:9092"
             - name: KAFKA_TOPIC
               value: "wikimedia.recentchange"
             - name: STREAM_URL

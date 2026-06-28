@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/domain"
 	commonpb "go.temporal.io/api/common/v1"
 	workflowpb "go.temporal.io/api/workflow/v1"
 	workflowservice "go.temporal.io/api/workflowservice/v1"

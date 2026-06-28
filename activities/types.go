@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/domain"
 )
 
 // Backend is the supported integration boundary for Kubernetes, GitOps, Flink,

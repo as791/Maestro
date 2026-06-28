@@ -1,6 +1,6 @@
 # Governance
 
-FCP uses a maintainer-led, consensus-seeking model.
+Maestro uses a maintainer-led, consensus-seeking model.
 
 ## Roles
 

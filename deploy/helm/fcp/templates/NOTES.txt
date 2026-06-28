@@ -1,14 +1,14 @@
-FCP (Flink Control Plane) installed as "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+Maestro installed as "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
 
 Temporal mode : {{ .Values.temporal.mode }}
-Temporal addr : {{ include "fcp.temporalAddress" . }}
+Temporal addr : {{ include "maestro.temporalAddress" . }}
 Watch namespaces: {{ join ", " .Values.flink.watchNamespaces }}
 
 Control API:
 {{- if eq .Values.controlApi.service.type "NodePort" }}
   NodePort {{ .Values.controlApi.service.nodePort }} (e.g. http://localhost:8080 on kind)
 {{- else }}
-  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "fcp.fullname" . }}-control-api 8080:{{ .Values.controlApi.service.port }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "maestro.fullname" . }}-control-api 8080:{{ .Values.controlApi.service.port }}
 {{- end }}
 
 Reminder: you must run your OWN Flink Kubernetes Operator (>= 1.15) in the watched

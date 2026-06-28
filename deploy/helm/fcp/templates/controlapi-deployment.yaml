@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "fcp.fullname" . }}-control-api
+  name: {{ include "maestro.fullname" . }}-control-api
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
     app.kubernetes.io/component: control-api
 spec:
   {{- if not .Values.controlApi.autoscaling.enabled }}
@@ -17,14 +17,14 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fcp.labels" . | nindent 8 }}
+        {{- include "maestro.labels" . | nindent 8 }}
         app.kubernetes.io/component: control-api
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "fcp.serviceAccountName" . }}
+      serviceAccountName: {{ include "maestro.serviceAccountName" . }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -37,7 +37,7 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            {{- include "fcp.commonEnv" . | nindent 12 }}
+            {{- include "maestro.commonEnv" . | nindent 12 }}
             - name: HTTP_ADDRESS
               value: ":8080"
           readinessProbe:
@@ -66,10 +66,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "fcp.fullname" . }}-control-api
+  name: {{ include "maestro.fullname" . }}-control-api
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
     app.kubernetes.io/component: control-api
 spec:
   type: {{ .Values.controlApi.service.type }}

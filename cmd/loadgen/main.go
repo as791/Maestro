@@ -1,4 +1,4 @@
-// Command loadgen exercises the FCP control plane at fleet scale. It registers N
+// Command loadgen exercises the Maestro control plane at fleet scale. It registers N
 // deployment actors and optionally drives a deploy on each, reporting throughput
 // and error counts. Point it at a control plane running the SIMULATED worker
 // (./cmd/worker) to validate Temporal/worker tuning for ~10k actors without a
@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/flink-control-plane/fcp/control"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/control"
+	"github.com/maestro-flink/maestro/domain"
 	"go.temporal.io/sdk/client"
 )
 

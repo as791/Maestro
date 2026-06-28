@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/flink-control-plane/fcp"
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/internal/config"
+	"github.com/maestro-flink/maestro"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/internal/config"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -15,27 +15,26 @@ import (
 func main() {
 	cfg := config.Load()
 	temporalClient, err := client.Dial(client.Options{
-		HostPort:  cfg.TemporalAddress,
-		Namespace: cfg.TemporalNamespace,
+		HostPort:  cfg.Temporal.Address,
+		Namespace: cfg.Temporal.Namespace,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer temporalClient.Close()
 
-	simulated := activities.NewSimulated(cfg.SimulationDelay)
-	activityWorker := worker.New(temporalClient, cfg.ActivityTaskQueue, worker.Options{})
-	fcp.RegisterActivities(activityWorker, simulated)
+	simulated := activities.NewSimulated(cfg.Simulator.Delay)
+	activityWorker := worker.New(temporalClient, cfg.Actor.ActivityTaskQueue, worker.Options{})
+	maestro.RegisterActivities(activityWorker, simulated)
 	if err := activityWorker.Start(); err != nil {
 		log.Fatal(err)
 	}
 	defer activityWorker.Stop()
 
-	// Start one actor worker per shard task queue.
-	actorQueues := fcp.ActorTaskQueues(cfg.ActorTaskQueue, cfg.ActorShards)
+	actorQueues := maestro.ActorTaskQueues(cfg.Actor.TaskQueue, cfg.Actor.Shards)
 	for _, queue := range actorQueues[1:] {
 		actorWorker := worker.New(temporalClient, queue, worker.Options{})
-		fcp.RegisterWorkflows(actorWorker)
+		maestro.RegisterWorkflows(actorWorker)
 		if err := actorWorker.Start(); err != nil {
 			log.Fatal(err)
 		}
@@ -43,11 +42,11 @@ func main() {
 	}
 
 	primary := worker.New(temporalClient, actorQueues[0], worker.Options{})
-	fcp.RegisterWorkflows(primary)
+	maestro.RegisterWorkflows(primary)
 
 	slog.Info("Temporal workers started",
 		"actorTaskQueues", actorQueues,
-		"activityTaskQueue", cfg.ActivityTaskQueue,
+		"activityTaskQueue", cfg.Actor.ActivityTaskQueue,
 	)
 	if err := primary.Run(worker.InterruptCh()); err != nil {
 		slog.Error("worker stopped", "error", err)

@@ -1,0 +1,24 @@
+# Maestro — Flink Actor Control Plane configuration
+# Copy to config.yaml (or config.local.yaml) and adjust values.
+# Environment variables override any value set here.
+
+temporal:
+  address: "localhost:7233"
+  namespace: "default"
+
+http:
+  address: ":8080"
+
+auth:
+  googleClientId: ""
+  googleClientSecret: ""
+  redirectUrl: "http://localhost:8080/auth/callback"
+
+actor:
+  taskQueue: "flink-control-actors"
+  activityTaskQueue: "flink-control-activities"
+  shards: 1
+  continueAfter: 500
+
+simulator:
+  delay: "100ms"

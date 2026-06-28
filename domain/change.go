@@ -49,7 +49,7 @@ func ClassifyChange(current *DeploymentVersion, target DeploymentSpec, policy Po
 			Risk:                  RiskStateful,
 			RequiresSavepoint:     true,
 			RequiresApproval:      true,
-			RequiresCapacityLease: resourceChanged(old.Resources, target.Resources),
+			RequiresCapacityLease: old.Resources != target.Resources,
 			Reason:                "state compatibility declaration requires guarded rollout",
 		}
 	}
@@ -58,11 +58,11 @@ func ClassifyChange(current *DeploymentVersion, target DeploymentSpec, policy Po
 			Risk:                  RiskStateful,
 			RequiresSavepoint:     policy.RequireRiskySavepoint,
 			RequiresApproval:      policy.RequireProdApproval,
-			RequiresCapacityLease: resourceChanged(old.Resources, target.Resources),
+			RequiresCapacityLease: old.Resources != target.Resources,
 			Reason:                "job arguments or max parallelism changed",
 		}
 	}
-	if old.Parallelism != target.Parallelism || resourceChanged(old.Resources, target.Resources) {
+	if old.Parallelism != target.Parallelism || old.Resources != target.Resources {
 		return ChangeClassification{
 			Risk:                  RiskSafe,
 			RequiresApproval:      policy.RequireProdApproval,
@@ -131,6 +131,3 @@ func hashMap(values map[string]string) string {
 	return hash(ordered)
 }
 
-func resourceChanged(a, b ResourceShape) bool {
-	return a != b
-}

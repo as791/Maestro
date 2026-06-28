@@ -1,26 +1,24 @@
-// Package kubernetes implements the FCP activities.Backend contract against a
+// Package kubernetes implements the Maestro activities.Backend contract against a
 // real Apache Flink Kubernetes Operator (>= 1.15) by reconciling FlinkDeployment
 // and FlinkStateSnapshot custom resources. It is a separate Go module so that
-// the public FCP core library does not take a client-go dependency.
+// the public Maestro core library does not take a client-go dependency.
 package kubernetes
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -29,12 +27,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const fieldManager = "fcp"
+const fieldManager = "maestro"
 
 // Config tunes the Kubernetes backend.
 type Config struct {
 	// LeaseNamespace is where capacity-lease ConfigMaps are stored. It should be
-	// a namespace the worker can write to (typically the FCP system namespace).
+	// a namespace the worker can write to (typically the Maestro system namespace).
 	LeaseNamespace string
 	// SlotBudget caps total reserved task slots per node pool.
 	SlotBudget int
@@ -64,7 +62,7 @@ type Config struct {
 
 func (c *Config) withDefaults() {
 	if c.LeaseNamespace == "" {
-		c.LeaseNamespace = "fcp-system"
+		c.LeaseNamespace = "maestro-system"
 	}
 	if c.SlotBudget <= 0 {
 		c.SlotBudget = 4096
@@ -330,7 +328,7 @@ func (b *Backend) RecordAudit(ctx context.Context, event activities.AuditEvent) 
 	now := metav1.NewTime(event.At)
 	k8sEvent := &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "fcp-",
+			GenerateName: "maestro-",
 			Namespace:    event.Identity.Namespace,
 		},
 		InvolvedObject: corev1.ObjectReference{
@@ -342,7 +340,7 @@ func (b *Backend) RecordAudit(ctx context.Context, event activities.AuditEvent) 
 		Reason:         event.Type,
 		Message:        event.Message,
 		Type:           corev1.EventTypeNormal,
-		Source:         corev1.EventSource{Component: "fcp"},
+		Source:         corev1.EventSource{Component: "maestro"},
 		FirstTimestamp: now,
 		LastTimestamp:  now,
 	}
@@ -364,25 +362,11 @@ func (b *Backend) getFlinkDeployment(ctx context.Context, namespace, name string
 			if u, ok := obj.(*unstructured.Unstructured); ok {
 				return u, nil
 			}
-			if u, convErr := toUnstructured(obj); convErr == nil {
-				return u, nil
-			}
 		}
 	}
 	return b.dyn.Resource(flinkDeploymentGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-func toUnstructured(obj runtime.Object) (*unstructured.Unstructured, error) {
-	raw, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-	u := &unstructured.Unstructured{}
-	if err := u.UnmarshalJSON(raw); err != nil {
-		return nil, err
-	}
-	return u, nil
-}
 
 func randID() string {
 	buf := make([]byte, 8)

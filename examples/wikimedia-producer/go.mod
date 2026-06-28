@@ -1,4 +1,4 @@
-module github.com/flink-control-plane/fcp/examples/wikimedia-producer
+module github.com/maestro-flink/maestro/examples/wikimedia-producer
 
 go 1.24.0
 

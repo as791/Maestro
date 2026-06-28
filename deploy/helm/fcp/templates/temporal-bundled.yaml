@@ -1,5 +1,5 @@
 {{- if eq .Values.temporal.mode "bundled" }}
-{{- $fullname := include "fcp.fullname" . }}
+{{- $fullname := include "maestro.fullname" . }}
 # ------------------------------------------------------------------------------
 # Bundled Temporal for trials / PoC ONLY. Single Postgres + single auto-setup
 # Temporal node with ephemeral storage. Do NOT use in production — point
@@ -11,7 +11,7 @@ metadata:
   name: {{ $fullname }}-postgresql
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
     app.kubernetes.io/component: temporal-postgresql
 spec:
   replicas: 1
@@ -22,7 +22,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fcp.labels" . | nindent 8 }}
+        {{- include "maestro.labels" . | nindent 8 }}
         app.kubernetes.io/component: temporal-postgresql
     spec:
       containers:
@@ -41,7 +41,7 @@ metadata:
   name: {{ $fullname }}-postgresql
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
 spec:
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -56,7 +56,7 @@ metadata:
   name: {{ $fullname }}-temporal
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
     app.kubernetes.io/component: temporal
 spec:
   replicas: 1
@@ -67,7 +67,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fcp.labels" . | nindent 8 }}
+        {{- include "maestro.labels" . | nindent 8 }}
         app.kubernetes.io/component: temporal
     spec:
       containers:
@@ -88,7 +88,7 @@ metadata:
   name: {{ $fullname }}-temporal
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
 spec:
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -104,7 +104,7 @@ metadata:
   name: {{ $fullname }}-temporal-web
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
     app.kubernetes.io/component: temporal-web
 spec:
   replicas: 1
@@ -115,7 +115,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "fcp.labels" . | nindent 8 }}
+        {{- include "maestro.labels" . | nindent 8 }}
         app.kubernetes.io/component: temporal-web
     spec:
       containers:
@@ -132,7 +132,7 @@ metadata:
   name: {{ $fullname }}-temporal-web
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "fcp.labels" . | nindent 4 }}
+    {{- include "maestro.labels" . | nindent 4 }}
 spec:
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}

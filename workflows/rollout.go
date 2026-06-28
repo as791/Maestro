@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/domain"
 	"go.temporal.io/sdk/workflow"
 )
 

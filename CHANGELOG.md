@@ -2,7 +2,7 @@
 
 All notable changes will be documented here.
 
-FCP follows [Semantic Versioning](https://semver.org/) after `v1.0.0`. During the pre-v1 period, breaking changes may be released in minor versions and will be identified explicitly.
+Maestro follows [Semantic Versioning](https://semver.org/) after `v1.0.0`. During the pre-v1 period, breaking changes may be released in minor versions and will be identified explicitly.
 
 ## Unreleased
 

@@ -1,0 +1,10 @@
+io/maestro/sdk/Deployment.class
+io/maestro/sdk/ResourceShape.class
+io/maestro/sdk/Json.class
+io/maestro/sdk/AutoscalerBase.class
+io/maestro/sdk/StateCompatibility.class
+io/maestro/sdk/DeploymentSpec$Builder.class
+io/maestro/sdk/MaestroClient.class
+io/maestro/sdk/DeploymentSpec.class
+io/maestro/sdk/MaestroResponse.class
+io/maestro/sdk/MaestroException.class

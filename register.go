@@ -1,15 +1,15 @@
-// Package fcp provides registration helpers for embedding the Flink Control
+// Package maestro provides registration helpers for embedding the Flink Control
 // Plane workflows and activities in a Temporal worker.
-package fcp
+package maestro
 
 import (
-	"github.com/flink-control-plane/fcp/activities"
-	"github.com/flink-control-plane/fcp/workflows"
+	"github.com/maestro-flink/maestro/activities"
+	"github.com/maestro-flink/maestro/workflows"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
 )
 
-// RegisterWorkflows installs all stable FCP workflow entry points.
+// RegisterWorkflows installs all stable Maestro workflow entry points.
 func RegisterWorkflows(w worker.Worker) {
 	w.RegisterWorkflow(workflows.ClusterActorWorkflow)
 	w.RegisterWorkflow(workflows.DeploymentActorWorkflow)

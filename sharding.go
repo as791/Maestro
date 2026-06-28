@@ -1,4 +1,4 @@
-package fcp
+package maestro
 
 import (
 	"fmt"

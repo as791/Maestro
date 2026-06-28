@@ -1,6 +1,6 @@
-# Contributing to FCP
+# Contributing to Maestro
 
-FCP accepts community and enterprise contributions under the Apache License 2.0.
+Maestro accepts community and enterprise contributions under the Apache License 2.0.
 
 ## Before opening a change
 

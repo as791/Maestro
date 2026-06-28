@@ -11,13 +11,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flink-control-plane/fcp/domain"
+	"github.com/maestro-flink/maestro/domain"
+	"github.com/maestro-flink/maestro/internal/auth"
 )
 
 type ControlService interface {
 	EnsureDeploymentActor(rctx context.Context, identity domain.DeploymentIdentity, policy *domain.Policy) error
 	SendCommand(rctx context.Context, identity domain.DeploymentIdentity, command domain.DeploymentCommand) error
 	ListDeployments(rctx context.Context, options domain.DeploymentListOptions) (domain.DeploymentList, error)
+	DescribeAll(rctx context.Context) ([]domain.DeploymentCardSummary, error)
 	Describe(rctx context.Context, identity domain.DeploymentIdentity) (domain.DeploymentActorView, error)
 	Versions(rctx context.Context, identity domain.DeploymentIdentity) ([]domain.DeploymentVersion, error)
 	SetClusterFreeze(rctx context.Context, environment, namespace string, command domain.ClusterCommand) error
@@ -36,14 +38,31 @@ func New(controlService ControlService) *Server {
 }
 
 func (s *Server) Handler() http.Handler {
-	return requestLogger(s.mux)
+	return auth.Middleware(requestLogger(s.mux))
 }
 
 func (s *Server) routes() {
 	registerUI(s.mux)
+	s.mux.HandleFunc("GET /swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs", http.StatusMovedPermanently)
+	})
+	s.mux.HandleFunc("GET /login", func(w http.ResponseWriter, r *http.Request) {
+		contents, err := uiFiles.ReadFile("web/login.html")
+		if err != nil {
+			http.Error(w, "login page unavailable", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		_, _ = w.Write(contents)
+	})
+	s.mux.HandleFunc("GET /auth/login", auth.OAuthStartHandler)
+	s.mux.HandleFunc("GET /auth/callback", auth.OAuthCallbackHandler)
+	s.mux.HandleFunc("GET /auth/logout", auth.LogoutHandler)
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+	s.mux.HandleFunc("GET /api/v1/deployments/summary", s.deploymentSummary)
 	s.mux.HandleFunc("GET /api/v1/deployments", s.listDeployments)
 	s.mux.HandleFunc("PUT /api/v1/deployments/{env}/{namespace}/{name}", s.register)
 	s.mux.HandleFunc("GET /api/v1/deployments/{env}/{namespace}/{name}/actor", s.describe)
@@ -60,6 +79,15 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/clusters/{env}/{namespace}/actor", s.describeCluster)
 	s.mux.HandleFunc("POST /api/v1/clusters/{env}/{namespace}/freeze", s.clusterCommand(domain.ClusterFreeze))
 	s.mux.HandleFunc("POST /api/v1/clusters/{env}/{namespace}/unfreeze", s.clusterCommand(domain.ClusterUnfreeze))
+}
+
+func (s *Server) deploymentSummary(w http.ResponseWriter, r *http.Request) {
+	cards, err := s.control.DescribeAll(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, cards)
 }
 
 func (s *Server) listDeployments(w http.ResponseWriter, r *http.Request) {
@@ -223,6 +251,7 @@ type rollbackRequest struct {
 	Requester     string `json:"requester"`
 	TargetVersion int64  `json:"targetVersion"`
 	Reason        string `json:"reason"`
+	Approved      bool   `json:"approved"`
 }
 
 func (s *Server) rollback(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +266,7 @@ func (s *Server) rollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	command.TargetVersion = request.TargetVersion
-	command.Approved = true
+	command.Approved = request.Approved
 	command.Reason = request.Reason
 	s.send(w, r, command)
 }
