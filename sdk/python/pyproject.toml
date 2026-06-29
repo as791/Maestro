@@ -16,5 +16,5 @@ lambda = ["boto3"]
 dev = ["pytest", "responses"]
 
 [project.urls]
-Homepage = "https://github.com/cohestra-project/cohestra"
+Homepage = "https://github.com/as791/Cohestra"
 Documentation = "https://cohestra.dev/docs"
