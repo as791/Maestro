@@ -14,11 +14,6 @@ const sidebars = {
       label: 'Autoscaling',
       items: ['autoscaling/overview', 'autoscaling/kafka-lag', 'autoscaling/cpu-based', 'autoscaling/lambda-deployment'],
     },
-    'api-reference',
-    'architecture',
-    'eks-deployment',
-    'safety',
-    'configuration',
   ],
 };
 
