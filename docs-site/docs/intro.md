@@ -4,7 +4,7 @@ slug: /
 title: Introduction
 ---
 
-# Cohestra — Control Plane
+# Cohestra
 
 **Open-source deployment management for Apache Flink on any Kubernetes cluster.**
 
