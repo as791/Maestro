@@ -18,6 +18,11 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
+.navbar__logo {
+  display: flex;
+  align-items: center;
+}
+
 .navbar__logo img {
   height: 56px;
   width: 56px;
