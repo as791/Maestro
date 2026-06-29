@@ -48,8 +48,8 @@ const config = {
         logo: {
           alt: 'Cohestra Logo',
           src: 'img/logo.png',
-          width: 44,
-          height: 44,
+          width: 56,
+          height: 56,
         },
         items: [
           { type: 'docSidebar', sidebarId: 'docsSidebar', position: 'left', label: 'Docs' },
