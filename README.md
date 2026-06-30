@@ -41,6 +41,7 @@ Deploy it with a single `helm install` on your EKS cluster. Build custom autosca
 
 - **Controlled Rollouts** — Savepoint-gated deployments with automatic health checks (checkpoint, restart, backpressure, Kafka lag, sink) and automatic rollback on failure
 - **Custom Autoscaler SDK** — Replace the Flink Operator autoscaler with your own logic using Python, Go, or Java SDKs. React to Kafka lag (CloudWatch MSK / Confluent), TaskManager CPU, or any metric
+- **MCP Server** — AI coding assistants (Claude, Cursor, Copilot) can query and operate Flink deployments directly via the [Model Context Protocol](https://modelcontextprotocol.io)
 - **Safety Guardrails** — Idempotency keys, prod approval gates, state-compatibility checks, capacity leases, and conservative change classification
 - **Durable History** — Every deploy, scale, rollback, and savepoint tracked as a Temporal workflow with full audit trail
 - **Cluster Freeze** — Namespace-level mutation freeze during incidents (savepoints still allowed)
@@ -181,6 +182,33 @@ orders.deploy(spec, "ci", true, "release v2.3.1");
 </tr>
 </table>
 
+## MCP Server — AI Assistant Integration
+
+Connect Claude, Cursor, or any MCP-compatible assistant to your Flink control plane:
+
+```bash
+pip install "mcp[cli]" cohestra-sdk
+COHESTRA_BASE_URL=http://localhost:8080 python3 mcp/server.py
+```
+
+Or add to `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "cohestra": {
+      "command": "python3",
+      "args": ["mcp/server.py"],
+      "env": { "COHESTRA_BASE_URL": "http://localhost:8080" }
+    }
+  }
+}
+```
+
+Then ask your assistant: _"Scale prod/streaming/orders to parallelism 16"_ or _"Roll back the orders deployment — the latest deploy is bad."_
+
+See the full [MCP Server docs](https://cohestra.dev/docs/mcp).
+
 ## Custom Autoscaler — Replace the Flink Operator Autoscaler
 
 The Flink Kubernetes Operator autoscaler has known stability issues — rescaling storms, flapping under bursty load, opaque decision-making. Cohestra gives you full control:
@@ -270,6 +298,7 @@ See the full [Autoscaling Guide](https://cohestra.dev/docs/autoscaling/overview)
 | **Python SDK** | [cohestra.dev/docs/sdk/python](https://cohestra.dev/docs/sdk/python) |
 | **Go SDK** | [cohestra.dev/docs/sdk/go](https://cohestra.dev/docs/sdk/go) |
 | **Java SDK** | [cohestra.dev/docs/sdk/java](https://cohestra.dev/docs/sdk/java) |
+| **MCP Server** | [cohestra.dev/docs/mcp](https://cohestra.dev/docs/mcp) |
 
 ## Use as a Library
 
