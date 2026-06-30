@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "cohestra": {
+      "command": "python3",
+      "args": ["mcp/server.py"],
+      "env": {
+        "COHESTRA_BASE_URL": "http://localhost:8080"
+      }
+    }
+  }
+}

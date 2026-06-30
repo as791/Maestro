@@ -26,6 +26,7 @@ Cohestra is an Apache 2.0-licensed control plane that manages the full lifecycle
 - **Controlled Rollouts** — Savepoint-gated deployments with automatic health checks and rollback on failure
 - **Custom Autoscaling** — Replace the Flink Operator autoscaler with your own logic using the SDK (Kafka lag, CPU, custom metrics)
 - **Multi-language SDKs** — Python, Go, and Java clients for programmatic control
+- **MCP Server** — AI coding assistants (Claude, Cursor, Copilot) can query and operate deployments directly via the Model Context Protocol
 - **Durable Operation History** — Every deploy, scale, rollback, and savepoint tracked in Temporal workflows
 - **Cluster Freeze** — Namespace-level mutation freeze during incidents
 - **GitOps Ready** — API-driven, idempotent operations with Idempotency-Key headers
@@ -35,7 +36,7 @@ Cohestra is an Apache 2.0-licensed control plane that manages the full lifecycle
 Cohestra uses the **actor model** implemented via long-running Temporal workflows — the same pattern [used by Netflix to orchestrate 12,000+ Flink clusters](https://temporal.io/resources/on-demand/actor-workflows-reliably-orchestrating-thousands-of-flink-clusters-at).
 
 ```
-SDK / CLI / CI  →  Cohestra API Server  →  Temporal Server
+SDK / CLI / CI / MCP  →  Cohestra API Server  →  Temporal Server
                                               ↓
                                         DeploymentActor (long-running)
                                           ↙          ↘
